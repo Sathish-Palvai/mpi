@@ -1,0 +1,104 @@
+{
+    "Rows": [
+        {
+            "id": "P001-RESOURCE1",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE1",
+            "ResourceType": "VPP_DEM",
+            "Area": "CHUBU",
+            "ShortName": "中部ＣＤＲ１－２",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE2",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE2",
+            "ResourceType": "BATTERY",
+            "Area": "HOKKAIDO",
+            "ShortName": "タのクリ",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE3",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE3",
+            "ResourceType": "VPP_DEM",
+            "Area": "CHUBU",
+            "ShortName": "中部ＣＤＲ１－２",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE4",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE4",
+            "ResourceType": "VPP_GEN_AND_DEM",
+            "Area": "CHUBU",
+            "ShortName": "中部ＣＤＲ３",
+            "ResourceSuspended": "Y",
+            "DrSuspended": "Y"
+        },
+        {
+            "id": "P001-RESOURCE5",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE5",
+            "ResourceType": "VPP_GEN_AND_DEM",
+            "Area": "CHUBU",
+            "ShortName": "中部ＣＤＲ４",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE6",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE6",
+            "ResourceType": "VPP_GEN_AND_DEM",
+            "Area": "CHUBU",
+            "ShortName": "中部ＣＤＲ５",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE7",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE7",
+            "ResourceType": "HYDRO",
+            "Area": "CHUBU",
+            "ShortName": "中部Ｃ社Ｄ",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE8",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE8",
+            "ResourceType": "VPP_GEN_AND_DEM",
+            "Area": "CHUBU",
+            "ShortName": "中部ＣＤＲ５",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE9",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE9",
+            "ResourceType": "VPP_GEN",
+            "Area": "CHUBU",
+            "ShortName": "理時間",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        },
+        {
+            "id": "P001-RESOURCE10",
+            "ParticipantName": "P001",
+            "ResourceName": "RESOURCE10",
+            "ResourceType": "BATTERY",
+            "Area": "CHUBU",
+            "ShortName": "通常停止",
+            "ResourceSuspended": "N",
+            "DrSuspended": "N"
+        }
+    ]
+}

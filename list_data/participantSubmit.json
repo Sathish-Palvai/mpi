@@ -1,0 +1,37 @@
+{
+	"RegistrationData": {
+		"ProcessingStatistics": {
+			"@Received": "1",
+			"@Valid": "1",
+			"@Invalid": "0",
+			"@Successful": "1",
+			"@Unsuccessful": "0",
+			"@ProcessingTimeMs": "43",
+			"@TransactionId": "CE3D5DC0",
+			"@TimeStamp": "Sat Apr 13 05:13:12 JST 2024",
+			"@XmlTimeStamp": "2024-04-13T05:13:12.982+09:00"
+		},
+		"RegistrationSubmit": {
+			"Messages": {
+				"Information": {
+					"@Code": "MPRCMN@I@RET-PASS",
+					"#text": "Successfully retrieved the Participant."
+				}
+			},
+			"Participant": {
+				"@ParticipantName": "D027",
+				"@ParticipantType": "BALANCING_SERVICE_PROVIDER",
+				"@StartDate": "2023-09-30",
+				"@Area": "04",
+				"@CompanyShortName": "中部Ｃ社",
+				"@CompanyLongName": "中部Ｃ株式会社",
+				"@PhonePart1": "052",
+				"@PhonePart2": "973",
+				"@PhonePart3": "3085",
+				"@TransactionId": "CD8T3M20"
+			}
+		},
+		"@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+		"@xsi:noNamespaceSchemaLocation": "mpr.xsd"
+	}
+}

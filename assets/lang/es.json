@@ -1,0 +1,527 @@
+{
+  "settings": {
+    "menu": {
+      "settings": "Configuración"
+    },
+    "header": {
+      "title": "Configuración",
+      "subtitle": "Personaliza tu experiencia en la aplicación"
+    },
+    "general": {
+      "title": "General",
+      "theme": "Tema",
+      "chooseAppearance": "Elige la apariencia de tu aplicación",
+      "lightTheme": "Claro",
+      "lightThemeDescription": "Interfaz limpia y brillante",
+      "darkTheme": "Oscuro",
+      "darkThemeDescription": "Fácil para los ojos con poca luz",
+      "systemTheme": "Sistema",
+      "systemThemeDescription": "Sigue la configuración del dispositivo",
+      "language": "Idioma",
+      "chooseLanguage": "Elige tu idioma preferido",
+      "labels": {
+        "language": "Idioma",
+        "theme": "Tema"
+      },
+      "languages": {
+        "en": "Inglés",
+        "es": "Español"
+      },
+      "themes": {
+        "Light": "Claro",
+        "Dark": "Oscuro"
+      }
+    },
+    "fontSize": {
+      "title": "Tamaño de Fuente",
+      "subtitle": "Elige el tamaño del texto para toda la aplicación",
+      "sizes": {
+        "small": "Pequeño",
+        "medium": "Mediano",
+        "large": "Grande",
+        "extraLarge": "Extra Grande"
+      },
+      "descriptions": {
+        "small": "Texto compacto para máximo contenido",
+        "medium": "Equilibrio entre legibilidad y espacio",
+        "large": "Experiencia de lectura cómoda",
+        "extraLarge": "Máxima legibilidad"
+      }
+    },
+    "alarms": {
+      "title": "Alarma",
+      "labels": {
+        "enableAlarm": "Activar Alarma",
+        "enableSound": "Activar Sonido"
+      }
+    },
+    "security": {
+      "title": "Seguridad",
+      "labels": {
+        "certificate": "Certificado Seleccionado",
+        "password": "Contraseña"
+      },
+      "placeholders": {
+        "certificate": "Selecciona tu certificado (archivo pfx).",
+        "password": "Proporciona la contraseña del certificado seleccionado y presiona Enter o el botón validar"
+      },
+      "buttons": {
+        "labels": {
+          "selectCertificate": "Seleccionar Certificado",
+          "validate": "Validar"
+        }
+      },
+      "messages": {
+        "cert": "Certificado",
+        "canActivate": "No se encontró clave privada para firmar el envío. Por favor selecciona un certificado en la página de configuración.",
+        "wrongpassword": " es incorrecta!",
+        "passwordMessage1": "Certificado y contraseña válidos.",
+        "passwordMessage2": "Por favor proporciona el certificado antes de cambiar la contraseña",
+        "passwordMessage3": "Contraseña incorrecta",
+        "passwordMessage4": "Certificado incorrecto seleccionado",
+        "character": "caracteres",
+        "required": " es requerido.",
+        "minlength": " no debe ser menor que "
+      },
+      "tooltips": {
+        "browse": "Haz clic para buscar certificado",
+        "validate": "Haz clic para validar certificado y contraseña"
+      }
+    },
+    "about": {
+      "title": "Acerca de",
+      "appName": "Nombre de la Aplicación",
+      "version": "Versión",
+      "developer": "Desarrollador"
+    },
+    "placeholders": {
+      "select": "Selecciona un valor :"
+    }
+  },
+  "participant": {
+    "header": {
+      "title": "Detalles del Participante",
+      "newTitle": "Agregar Nuevo Participante",
+      "queryTitle": "Criterios"
+    },
+    "tabs": {
+      "generalTab": "Detalles Generales",
+      "validityTab": "Validez del Participante",
+      "bankAccountTab": "Cuenta Bancaria"
+    },
+    "placeholders": {
+      "ParticipantName": "Valor generado por el sistema",
+      "CompanyLongName": "Debe ser del patrón: Caracteres japoneses",
+      "CompanyShortName": "Debe ser del patrón: Caracteres japoneses",
+      "PhonePart1": "XXXXX",
+      "PhonePart2": "XXXX",
+      "PhonePart3": "XXXX",
+      "TransactionId": ""
+    },
+    "tooltips": {
+      "addNewParticipant": "Agregar Nuevo Usuario",
+      "addParticipant": "Agregar Usuario"
+    },
+    "messages": {
+      "CompanyLongName": "Debe ser del patrón: Caracteres japoneses",
+      "CompanyShortName": "Debe ser del patrón: Caracteres japoneses",
+      "ParticipantName": "Debe ser del patrón : (^[A-W]([0-9][0-9][1-9]|[0-9][1-9][0-9]|[1-9][0-9][0-9])$)"
+    },
+    "RegistrationQuery": {
+      "Date": "Fecha de Transacción",
+      "Participant": {
+        "ParticipantName": "Nombre del Participante"
+      }
+    },
+    "RegistrationSubmit": {
+      "Participant": {
+        "ParticipantName": "Nombre del Participante",
+        "ParticipantType": "Tipo de Participante",
+        "StartDate": "Fecha de Inicio",
+        "EndDate": "Fecha de Fin",
+        "Area": "Área",
+        "CompanyShortName": "Nombre Corto de la Empresa",
+        "CompanyLongName": "Nombre Largo de la Empresa",
+        "PhonePart1Alias": "Teléfono Parte1",
+        "PhonePart1": "Número de Teléfono",
+        "PhonePart2": "Teléfono Parte2",
+        "PhonePart3": "Teléfono Parte3",
+        "TransactionId": "ID de Transacción"
+      }
+    },
+    "buttons": {
+      "reset": "Restablecer",
+      "create": "Crear Participante",
+      "creating": "Creando...",
+      "submit": "Enviar",
+      "saving": "Guardando...",
+      "query": "Consultar"
+    },
+    "feedback": {
+      "messagesTitle": "Mensajes",
+      "createdSuccess": "Participante creado exitosamente con nombre: {name}",
+      "updatedSuccess": "Participante actualizado exitosamente",
+      "querySuccess": "Datos del participante cargados exitosamente",
+      "fixFormErrors": "Por favor corrige los errores en el formulario",
+      "nameTrimmed": "Nombre del participante recortado a los primeros 4 caracteres (longitud máxima = 4).",
+      "failedToCreate": "Error al agregar participante: {error}",
+      "failedToUpdate": "Error al actualizar participante: {error}",
+      "failedToQuery": "Error al consultar participante: {error}"
+    },
+    "notes": {
+      "startDateRestriction": "Una vez que se envía un nuevo envío o actualización, la fecha de inicio no puede establecerse antes de la fecha de inicio registrada"
+    }
+  },
+  "participantValidity": {
+    "header": {
+      "title": "Detalles de Validez del Participante",
+      "queryTitle": "Consultar Validez del Participante",
+      "newTitle": "Agregar Nueva Validez del Participante"
+    },
+    "grid": {
+      "title": "Validez del Participante",
+      "ParticipantName": "Nombre del Participante",
+      "StartDate": "Fecha de Inicio",
+      "EndDate": "Fecha de Fin",
+      "ParticipantState": "Estado del Participante",
+      "TransactionId": "ID de Transacción"
+    },
+    "placeholders": {
+      "ParticipantName": "Auto-generado",
+      "ParticipantState": "Predeterminado: REGISTRADO",
+      "TransactionId": ""
+    },
+    "RegistrationQuery": {
+      "Date": "Fecha de Transacción",
+      "ParticipantValidity": {
+        "ParticipantName": "Nombre del Participante"
+      }
+    },
+    "RegistrationSubmit": {
+      "ParticipantValidity": {
+        "ParticipantName": "Nombre del Participante",
+        "StartDate": "Fecha de Inicio",
+        "EndDate": "Fecha de Fin",
+        "ParticipantState": "Estado del Participante",
+        "TransactionId": "ID de Transacción"
+      }
+    }
+  },
+  "resource": {
+    "header": {
+      "title": "Detalles del Recurso",
+      "newTitle": "Agregar Nuevo Recurso",
+      "transferSectionTitle": "Detalles de Transferencia"
+    },
+    "notes": {
+      "oam": "Nota: Verifica el objetivo comercial del producto y proporciona la entrada para el campo requerido."
+    },
+    "stepper": {
+      "labels": {
+        "generalDetails": "Detalles Generales",
+        "outputBand": "Banda de Salida",
+        "switchOutput": "Salida de Conmutación",
+        "afc": "Rango de Salida Debajo de AFC",
+        "startupPattern": "Patrón de Inicio",
+        "stopPattern": "Patrón de Parada",
+        "approval": "Aprobación / Retiro"
+      },
+      "tooltips": {
+        "generalDetails": "Detalles generales",
+        "outputBand": "Detalles de banda de salida",
+        "switchOutput": "Detalles de salida de conmutación",
+        "afc": "Detalles de AFC",
+        "startupPattern": "Detalles del patrón de inicio",
+        "stopPattern": "Detalles del patrón de parada",
+        "approval": "Aprobación / Retiro"
+      }
+    },
+    "startupPattern": {
+      "labels": {
+        "stepLabel": "Patrón de Inicio",
+        "addOrRemove": "Agregar o Eliminar Patrones de Inicio",
+        "selectedPattern": "Nombre del Patrón de Inicio Seleccionado",
+        "newPattern": "Nombre del Nuevo Patrón"
+      },
+      "tooltips": {
+        "startup": "Detalles del patrón de inicio",
+        "removePattern": "Haz clic para eliminar patrón"
+      },
+      "placeholder": "Escribe el nombre del patrón y presiona Enter para agregar",
+      "errors": {
+        "japaneseCharactersOnly": "Solo caracteres japoneses"
+      }
+    },
+    "stopPattern": {
+      "labels": {
+        "stepLabel": "Patrón de Parada",
+        "addOrRemove": "Agregar o Eliminar Patrones de Parada",
+        "selectedPattern": "Nombre del Patrón de Parada Seleccionado",
+        "newPattern": "Nombre del Nuevo Patrón"
+      },
+      "tooltips": {
+        "stop": "Detalles del patrón de parada",
+        "removePattern": "Haz clic para eliminar patrón"
+      },
+      "placeholder": "Escribe el nombre del patrón y presiona Enter para agregar",
+      "errors": {
+        "japaneseCharactersOnly": "Solo caracteres japoneses"
+      }
+    },
+    "placeholders": {
+      "ResourceName": "[A-Z0-9_\\-]*",
+      "SystemCode": "Alfabeto ASCII en mayúsculas, numérico ASCII",
+      "ResourceShortName": "Debe ser del patrón: Caracteres japoneses",
+      "ResourceLongName": "Debe ser del patrón: Caracteres japoneses",
+      "BgCode": "Debe ser del patrón: [a-zA-Z0-9]*",
+      "PriResponseTime": "HH:MM:SS",
+      "PriContinuousTime": "HH:MM:SS",
+      "PriMaximumSupplyQuantity": "0 o XXXX a XXXXXXX",
+      "PriRemResvMaximumSupplyQuantity": "X a XXXXXXX",
+      "Sec1ResponseTime": "HH:MM:SS",
+      "Sec1ContinuousTime": "HH:MM:SS",
+      "Sec1MaximumSupplyQuantity": "0 o XXXX a XXXXXXX",
+      "Sec1RemResvMaximumSupplyQuantity": "X a XXXXXXX",
+      "Sec2ResponseTime": "HH:MM:SS",
+      "Sec2ContinuousTime": "HH:MM:SS",
+      "Sec2DownTime": "HH:MM:SS",
+      "Sec2MaximumSupplyQuantity": "0 o XXXX a XXXXXXX",
+      "Sec2RemResvMaximumSupplyQuantity": "X a XXXXXXX",
+      "Ter1ResponseTime": "HH:MM:SS",
+      "Ter1ContinuousTime": "HH:MM:SS",
+      "Ter1MaximumSupplyQuantity": "0 o XXXX a XXXXXXX",
+      "Ter1RemResvMaximumSupplyQuantity": "X a XXXXXXX",
+      "Ter2ResponseTime": "HH:MM:SS",
+      "Ter2ContinuousTime": "HH:MM:SS",
+      "Ter2MaximumSupplyQuantity": "0 o XXXX a XXXXXXX",
+      "Ter2RemResvMaximumSupplyQuantity": "X a XXXXXXX",
+      "Address": "Debe ser del patrón: Caracteres japoneses",
+      "PayeePhonePart1": "XXXXX",
+      "PayeePhonePart2": "XXXX",
+      "PayeePhonePart3": "XXXX",
+      "ModelName": "Debe ser del patrón: Caracteres ASCII y japoneses",
+      "VenId": "Debe ser del patrón: Alfanumérico ASCII y caracteres especiales ASCII",
+      "MarketContext": "Debe ser del patrón: Alfanumérico ASCII y caracteres especiales ASCII",
+      "DeclaredMaximumUnitPrice": "X(0) a XXXX.XX (9999.99)",
+      "RatedCapacity": "XXXX a XXXXXXX",
+      "RatedVoltage": "X.X (0.0) a XXXX.X (1000.0)",
+      "RatedPowerFactor": "X.X (0.0) a XXX.X (100.0)",
+      "Frequency": "",
+      "InPlantRate": "Debe ser del patrón: Caracteres ASCII y japoneses",
+      "ContinuousOperationVoltage": "X.X (0.0) a XXX.X (100.0)",
+      "ContinuousOperationFrequencyLower": "XX.X (40.0) a XX.X (70.0)",
+      "ContinuousOperationFrequencyUpper": "XX.X (40.0) a XX.X (70.0)",
+      "RatedOutput": "XXXXXXX",
+      "MinimumOutput": "XXXXXXX",
+      "AuthorizedMaximumOutput": "XXXXXXX",
+      "BatteryCapacity": "XXXX a XXXXXXX",
+      "DischargingOutput": "XXXXXXX",
+      "DischargingTime": "XX",
+      "ChargingOutput": "XXXXXXX",
+      "ChargingTime": "XX",
+      "FullPowerGenerationTime": "X.X (0.0) a XX.X (99.9)",
+      "ContinuousOperationTime": "X.X (0.0) a XX.X (99.9)",
+      "ContinuousOperationTimeLimited": "X.X (0.0) a XX.X (99.9)",
+      "AmountOfWaterUsed": "XXXXXXX",
+      "ReservoirCapacity": "XXXXXXX",
+      "InflowAmount": "XXXXXXX",
+      "ContinuousOperationOutput": "XXXXXXX",
+      "PumpedSupply": "XXXXXXX",
+      "OverPowerOperationMaximumOutput": "XXXXXXX",
+      "PeakModeOperationMaximumOutput": "XXXXXXX",
+      "OperationTime": "X.X (0.0) a XX.X (99.9)",
+      "NumberOfStartups": "XXXX",
+      "AfcMinimumOutput": "XXXXXXX",
+      "GfVariationRate": "X.X (0.0) a XXX.X (100.0)",
+      "DeadBand": "X.XXXX (0.0000) a X.XXXX (9.9999)",
+      "FrequencyMeasurementInterval": "X.XX (0.00) a X.XX (9.99)",
+      "FrequencyMeasurementError": "X.XXX (0.000) a X.XXX (9.999)",
+      "DelayTime": "X.X (0.0) a X.X (9.9)",
+      "GfWidthOutOfRatedOutput": "X (0) a XXXXXXX (9999999)",
+      "TransactionId": "",
+      "RecordStatus": "",
+      "Comments": "Debe ser del Patrón: Caracteres ASCII y japoneses"
+    },
+    "messages": {
+      "VenId": "Debe ser del patrón: Alfanumérico ASCII, caracteres especiales ASCII",
+      "MarketContext": "Debe ser del patrón: Alfanumérico ASCII, caracteres especiales ASCII",
+      "ModelName": "Debe ser del patrón: Caracteres ASCII y japoneses",
+      "InPlantRate": "Debe ser del patrón: Caracteres ASCII y japoneses",
+      "ResourceName": "Debe ser del patrón : ([A-Z0-9_-]*)"
+    },
+    "RegistrationQuery": {
+      "Date": "Fecha de Transacción",
+      "Resource": {
+        "ResourceName": "Nombre del Recurso",
+        "ParticipantName": "Nombre del Participante",
+        "RecordStatus": "Estado del Registro"
+      }
+    },
+    "RegistrationApproval": {
+      "Resource": {
+        "ResourceName": "Nombre del Recurso",
+        "ParticipantName": "Nombre del Participante",
+        "TransactionId": "ID de Transacción",
+        "Action": "Acción",
+        "Comments": "Comentarios"
+      }
+    },
+    "RegistrationSubmit": {
+      "Date": "Fecha de Transacción",
+      "Resource": {
+        "ParticipantName": "Nombre del Participante",
+        "ResourceName": "Nombre del Recurso",
+        "Area": "Área",
+        "ContractType": "Tipo de Contrato",
+        "ResourceType": "Tipo de Recurso",
+        "StartDate": "Fecha de Inicio",
+        "EndDate": "Fecha de Fin",
+        "SystemCode": "Código de Sistema",
+        "ResourceShortName": "Nombre Corto del Recurso",
+        "ResourceLongName": "Nombre Largo del Recurso",
+        "BgCode": "Código BG",
+        "Pri": "Primario",
+        "PriResponseTime": "Tiempo de Respuesta [hora:min:seg]",
+        "PriContinuousTime": "Tiempo Continuo [hora:min:seg]",
+        "PriMaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro (Primario) [kW]",
+        "PriMaximumSupplyQuantityPowerSupply": "Cantidad Máxima Posible de Suministro (Primario) [kW]",
+        "PriRemResvUtilization": "Disponibilidad de Utilización de Reserva Restante (Primario)",
+        "PriRemResvMaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro de Reserva Restante (Primario) [kW]",
+        "Sec1": "Secundario1",
+        "Sec1ResponseTime": "Tiempo de Respuesta [hora:min:seg]",
+        "Sec1ContinuousTime": "Tiempo Continuo [hora:min:seg]",
+        "Sec1MaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro (Secundario1) [kW]",
+        "Sec1MaximumSupplyQuantityPowerSupply": "Cantidad Máxima Posible de Suministro (Secundario1) [kW]",
+        "Sec1RemResvUtilization": "Disponibilidad de Utilización de Reserva Restante (Secundario1)",
+        "Sec1RemResvMaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro de Reserva Restante (Secundario1) [kW]",
+        "Sec2": "Secundario2",
+        "Sec2ResponseTime": "Tiempo de Respuesta [hora:min:seg]",
+        "Sec2ContinuousTime": "Tiempo Continuo [hora:min:seg]",
+        "Sec2DownTime": "Tiempo de Inactividad [hora:min:seg]",
+        "Sec2MaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro (Secundario2) [kW]",
+        "Sec2MaximumSupplyQuantityPowerSupply": "Cantidad Máxima Posible de Suministro (Secundario2) [kW]",
+        "Sec2RemResvUtilization": "Disponibilidad de Utilización de Reserva Restante (Secundario2)",
+        "Sec2RemResvMaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro de Reserva Restante (Secundario2) [kW]",
+        "Ter1": "Terciario1",
+        "Ter1ResponseTime": "Tiempo de Respuesta [hora:min:seg]",
+        "Ter1ContinuousTime": "Tiempo Continuo [hora:min:seg]",
+        "Ter1MaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro (Terciario1) [kW]",
+        "Ter1MaximumSupplyQuantityPowerSupply": "Cantidad Máxima Posible de Suministro (Terciario1) [kW]",
+        "Ter1RemResvUtilization": "Disponibilidad de Utilización de Reserva Restante (Terciario1)",
+        "Ter1RemResvMaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro de Reserva Restante (Terciario1) [kW]",
+        "Ter2": "Terciario2",
+        "Ter2ResponseTime": "Tiempo de Respuesta [hora:min:seg]",
+        "Ter2ContinuousTime": "Tiempo Continuo [hora:min:seg]",
+        "Ter2MaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro (Terciario2) [kW]",
+        "Ter2MaximumSupplyQuantityPowerSupply": "Cantidad Máxima Posible de Suministro (Terciario2) [kW]",
+        "Ter2RemResvUtilization": "Disponibilidad de Utilización de Reserva Restante (Terciario2)",
+        "Ter2RemResvMaximumSupplyQuantity": "Cantidad Máxima Posible de Suministro de Reserva Restante (Terciario2) [kW]",
+        "PriSec1CommandOperationMethod": "Método de Operación de Comando (Primario/Secundario1)",
+        "Sec2Ter1Ter2CommandOperationMethod": "Método de Operación de Comando (Secundario2/Terciario1/Terciario2)",
+        "SignalType": "Tipo de Señal",
+        "BaselineSettingMethod": "Método de Configuración de Línea Base",
+        "ContractExistence": "Existencia de Contrato de Suministro de Energía I'",
+        "DeclaredMaximumUnitPrice": "Precio Unitario Máximo Declarado de Fuente de Energía I' [Yen/kWh]",
+        "VoltageAdjustment": "Ajuste de Voltaje",
+        "Address": "Dirección",
+        "PayeePhonePart1Alias": "Teléfono del Beneficiario Parte1",
+        "PayeePhonePart1": "Número de Teléfono del Beneficiario",
+        "PayeePhonePart2": "Teléfono del Beneficiario Parte2",
+        "PayeePhonePart3": "Teléfono del Beneficiario Parte3",
+        "VenId": "VENID",
+        "MarketContext": "Contexto de Mercado",
+        "ModelName": "Nombre del Modelo",
+        "RatedCapacity": "Capacidad Nominal [kVA]",
+        "RatedVoltage": "Voltaje Nominal [kV]",
+        "RatedPowerFactor": "Factor de Potencia Nominal [%]",
+        "Frequency": "Frecuencia [Hz]",
+        "InPlantRate": "Tasa en Planta",
+        "ContinuousOperationVoltage": "Voltaje que permite Operación Continua [%]",
+        "ContinuousOperationFrequencyLower": "Frecuencia permitida para Operación Continua (límite inferior) [Hz]",
+        "ContinuousOperationFrequencyUpper": "Frecuencia permitida para Operación Continua (límite superior) [Hz]",
+        "BlackStart": "Arranque en Negro",
+        "RatedOutput": "Salida Nominal [kW]",
+        "MinimumOutput": "Salida Mínima [kW]",
+        "AuthorizedMaximumOutput": "Salida Máxima Autorizada [kW]",
+        "ThermalType": "Tipo Térmico",
+        "BatteryCapacity": "Capacidad de Batería [kWh]",
+        "PumpCharging": "Bombeo/Carga",
+        "VariableSpeedOperation": "Operación de Velocidad Variable/Operación de Ajuste de Carga",
+        "DischargingOutput": "Salida/Descarga – Salida [kW]",
+        "DischargingTime": "Salida/Descarga – Operación~Tiempo de Conexión [min]",
+        "ChargingOutput": "Bombeo/Carga – Salida [kW]",
+        "ChargingTime": "Bombeo/Carga – Operación~Tiempo de Conexión [min]",
+        "FullPowerGenerationTime": "Tiempo posible para la Generación de Energía Completa [hora]",
+        "ContinuousOperationTime": "Tiempo posible para Operación Continua [hora]",
+        "ContinuousOperationTimeLimited": "Tiempo posible para Operación Continua (si está limitado) [hora]",
+        "PhaseModifyingOperation": "Operación de Modificación de Fase",
+        "AmountOfWaterUsed": "Cantidad de Agua Utilizada",
+        "ReservoirCapacity": "Capacidad del Embalse",
+        "InflowAmount": "Cantidad de Afluencia",
+        "ContinuousOperationOutput": "Salida-horas posible para Operación Continua [kW]",
+        "PumpedSupply": "Suministro Bombeado [kW]",
+        "FcbOperation": "Operación FCB",
+        "OverPowerOperation": "Operación de Sobrepotencia",
+        "PeakModeOperation": "Operación en Modo Pico",
+        "Dss": "DSS",
+        "OverPowerOperationMaximumOutput": "Salida Máxima (Operación de Sobrepotencia) [kW]",
+        "PeakModeOperationMaximumOutput": "Salida Máxima (Operación en Modo Pico) [kW]",
+        "OperationTime": "Tiempo posible para Operar [hora]",
+        "NumberOfStartups": "Número de Arranques posibles [veces]",
+        "AfcMinimumOutput": "Salida Mínima posible para la Operación AFC [kW]",
+        "GfVariationRate": "Tasa de Variación GF [%]",
+        "DeadBand": "Banda Muerta [Hz]",
+        "FrequencyMeasurementInterval": "Intervalo de Medición de Frecuencia [seg]",
+        "FrequencyMeasurementError": "Error de Medición de Frecuencia [Hz]",
+        "DelayTime": "Tiempo de Retardo [seg]",
+        "GfWidthOutOfRatedOutput": "Ancho GF (Fuera de Salida Nominal) [kW]",
+        "Transfer": "Transferencia",
+        "PreviousParticipantName": "Nombre del Participante Anterior",
+        "PreviousResourceName": "Nombre del Recurso Anterior",
+        "TransactionId": "ID de Transacción",
+        "RecordStatus": "Estado del Registro",
+        "Comments": "Comentarios",
+        "OutputBand": {
+          "OutputBandInfo": {
+            "Upper": "Banda de Salida Superior [kW]",
+            "Output": "Banda de Salida Inferior [kW]",
+            "GfWidth": "Ancho [kW] - GF",
+            "AfcWidth": "Ancho [kW] - AFC",
+            "AfcVariationSpeed": "Velocidad de Variación [kW/min] - AFC",
+            "OtmVariationSpeed": "Velocidad de Variación [kW/min] - OTM",
+            "AfcOtmVariationSpeed": "Velocidad de Variación [kW/min] - AFC+OTM"
+          }
+        },
+        "SwitchOutput": {
+          "SwitchOutputInfo": {
+            "Output": "Salida de Conmutación [kW]",
+            "SwitchTime": "Tiempo requerido para cambiar la Banda de Salida para el AFC [min]"
+          }
+        },
+        "OutputRangeBelowAfc": {
+          "OutputRangeBelowAfcInfo": {
+            "Output": "Salida [kW]",
+            "OperationTime": "Tiempo necesario para Operar [hora]",
+            "OutputVariationSpeed": "Velocidad de Variación de Salida [kW/min]"
+          }
+        },
+        "StartupPattern": {
+          "PatternName": "",
+          "StartupPatternInfo": {
+            "EventName": "Nombre del Evento",
+            "ChangeTime": "Tiempo [hora:min]",
+            "Output": "Salida [kW]"
+          }
+        },
+        "StopPattern": {
+          "PatternName": "",
+          "StopPatternInfo": {
+            "EventName": "Nombre del Evento",
+            "ChangeTime": "Tiempo [hora:min]",
+            "Output": "Salida [kW]"
+          }
+        }
+      }
+    }
+  }
+}

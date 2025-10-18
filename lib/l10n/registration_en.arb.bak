@@ -1,0 +1,281 @@
+{
+    "@@locale": "en",
+    
+    "@@_REGISTRATION_MODULE_START": "========================================",
+    "@@_REGISTRATION_MODULE": "REGISTRATION MODULE - All registration related translations",
+    "@@_REGISTRATION_MODULE_END": "========================================",
+    
+    "@@_PARTICIPANT_HEADERS": "--- Participant Headers ---",
+    
+    "participantHeaderTitle": "Participant Details",
+    "@participantHeaderTitle": {
+        "description": "Main title for participant details screen"
+    },
+    
+    "participantHeaderNewTitle": "Add New Participant",
+    "@participantHeaderNewTitle": {
+        "description": "Title for add new participant screen"
+    },
+    
+    "@@_PARTICIPANT_TABS": "--- Participant Tabs ---",
+    
+    "participantTabsGeneral": "General Details",
+    "@participantTabsGeneral": {
+        "description": "General details tab label"
+    },
+    
+    "participantTabsValidity": "Participant Validity",
+    "@participantTabsValidity": {
+        "description": "Participant validity tab label"
+    },
+    
+    "participantTabsBankAccount": "Bank Account",
+    "@participantTabsBankAccount": {
+        "description": "Bank account tab label"
+    },
+    
+    "@@_PARTICIPANT_PLACEHOLDERS": "--- Participant Field Placeholders ---",
+    
+    "participantPlaceholdersParticipantName": "System generated value",
+    "@participantPlaceholdersParticipantName": {
+        "description": "Placeholder for participant name field"
+    },
+    
+    "participantPlaceholdersCompanyLongName": "Must be of pattern: Japanese characters",
+    "@participantPlaceholdersCompanyLongName": {
+        "description": "Placeholder for company long name field"
+    },
+    
+    "participantPlaceholdersCompanyShortName": "Must be of pattern: Japanese characters",
+    "@participantPlaceholdersCompanyShortName": {
+        "description": "Placeholder for company short name field"
+    },
+    
+    "participantPlaceholdersPhonePart1": "XXXXX",
+    "@participantPlaceholdersPhonePart1": {
+        "description": "Placeholder for phone part 1 field"
+    },
+    
+    "participantPlaceholdersPhonePart2": "XXXX",
+    "@participantPlaceholdersPhonePart2": {
+        "description": "Placeholder for phone part 2 field"
+    },
+    
+    "participantPlaceholdersPhonePart3": "XXXX",
+    "@participantPlaceholdersPhonePart3": {
+        "description": "Placeholder for phone part 3 field"
+    },
+    
+    "participantPlaceholdersTransactionId": "",
+    "@participantPlaceholdersTransactionId": {
+        "description": "Placeholder for transaction ID field"
+    },
+    
+    "@@_PARTICIPANT_TOOLTIPS": "--- Participant Tooltips ---",
+    
+    "participantTooltipsAddNewParticipant": "Add New User",
+    "@participantTooltipsAddNewParticipant": {
+        "description": "Tooltip for add new participant button"
+    },
+    
+    "participantTooltipsAddParticipant": "Add User",
+    "@participantTooltipsAddParticipant": {
+        "description": "Tooltip for add participant button"
+    },
+    
+    "@@_PARTICIPANT_VALIDATION_MESSAGES": "--- Participant Validation Messages ---",
+    
+    "participantMessagesCompanyLongName": "Must be of pattern: Japanese characters",
+    "@participantMessagesCompanyLongName": {
+        "description": "Validation message for company long name"
+    },
+    
+    "participantMessagesCompanyShortName": "Must be of pattern: Japanese characters",
+    "@participantMessagesCompanyShortName": {
+        "description": "Validation message for company short name"
+    },
+    
+    "participantMessagesParticipantName": "Must be of pattern : (^[A-W]([0-9][0-9][1-9]|[0-9][1-9][0-9]|[1-9][0-9][0-9])$)",
+    "@participantMessagesParticipantName": {
+        "description": "Validation message for participant name pattern"
+    },
+    
+    "@@_PARTICIPANT_QUERY_FIELDS": "--- Participant Query Fields (RegistrationQuery) ---",
+    
+    "participantQueryDate": "Trade Date",
+    "@participantQueryDate": {
+        "description": "Trade date field label in query form"
+    },
+    
+    "participantQueryParticipantName": "Participant Name",
+    "@participantQueryParticipantName": {
+        "description": "Participant name field label in query form"
+    },
+    
+    "@@_PARTICIPANT_SUBMIT_FIELDS": "--- Participant Submit Fields (RegistrationSubmit) ---",
+    
+    "participantSubmitParticipantName": "Participant Name",
+    "@participantSubmitParticipantName": {
+        "description": "Participant name field label"
+    },
+    
+    "participantSubmitParticipantType": "Participant Type",
+    "@participantSubmitParticipantType": {
+        "description": "Participant type field label"
+    },
+    
+    "participantSubmitStartDate": "Start Date",
+    "@participantSubmitStartDate": {
+        "description": "Start date field label"
+    },
+    
+    "participantSubmitEndDate": "End Date",
+    "@participantSubmitEndDate": {
+        "description": "End date field label"
+    },
+    
+    "participantSubmitArea": "Area",
+    "@participantSubmitArea": {
+        "description": "Area field label"
+    },
+    
+    "participantSubmitCompanyShortName": "Company Short Name",
+    "@participantSubmitCompanyShortName": {
+        "description": "Company short name field label"
+    },
+    
+    "participantSubmitCompanyLongName": "Company Long Name",
+    "@participantSubmitCompanyLongName": {
+        "description": "Company long name field label"
+    },
+    
+    "participantSubmitPhonePart1Alias": "Phone Part1",
+    "@participantSubmitPhonePart1Alias": {
+        "description": "Phone part 1 alias label"
+    },
+    
+    "participantSubmitPhonePart1": "Phone Number",
+    "@participantSubmitPhonePart1": {
+        "description": "Phone number field label"
+    },
+    
+    "participantSubmitPhonePart2": "Phone Part2",
+    "@participantSubmitPhonePart2": {
+        "description": "Phone part 2 field label"
+    },
+    
+    "participantSubmitPhonePart3": "Phone Part3",
+    "@participantSubmitPhonePart3": {
+        "description": "Phone part 3 field label"
+    },
+    
+    "participantSubmitTransactionId": "Transaction Id",
+    "@participantSubmitTransactionId": {
+        "description": "Transaction ID field label"
+    },
+    
+    "@@_PARTICIPANT_ACTION_BUTTONS": "--- Participant Action Buttons ---",
+    
+    "participantButtonsReset": "Reset",
+    "@participantButtonsReset": {
+        "description": "Reset button text"
+    },
+    
+    "participantButtonsCreate": "Create Participant",
+    "@participantButtonsCreate": {
+        "description": "Create participant button text"
+    },
+    
+    "participantButtonsCreating": "Creating...",
+    "@participantButtonsCreating": {
+        "description": "Creating participant loading text"
+    },
+    
+    "participantButtonsSave": "Save",
+    "@participantButtonsSave": {
+        "description": "Save button text"
+    },
+    
+    "participantButtonsSaving": "Saving...",
+    "@participantButtonsSaving": {
+        "description": "Saving changes loading text"
+    },
+    
+    "participantButtonsQuery": "Query",
+    "@participantButtonsQuery": {
+        "description": "Query button text"
+    },
+    
+    "@@_PARTICIPANT_FEEDBACK_MESSAGES": "--- Participant Feedback Messages ---",
+    
+    "participantFeedbackMessagesTitle": "Messages",
+    "@participantFeedbackMessagesTitle": {
+        "description": "Response messages card title"
+    },
+    
+    "participantFeedbackCreatedSuccess": "Participant created successfully with name: {name}",
+    "@participantFeedbackCreatedSuccess": {
+        "description": "Participant created success message",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "A001"
+            }
+        }
+    },
+    
+    "participantFeedbackUpdatedSuccess": "Participant updated successfully",
+    "@participantFeedbackUpdatedSuccess": {
+        "description": "Participant updated success message"
+    },
+    
+    "participantFeedbackQuerySuccess": "Participant data loaded successfully",
+    "@participantFeedbackQuerySuccess": {
+        "description": "Participant query success message"
+    },
+    
+    "participantFeedbackFixFormErrors": "Please fix the errors in the form",
+    "@participantFeedbackFixFormErrors": {
+        "description": "Form validation error message"
+    },
+    
+    "participantFeedbackNameTrimmed": "Participant name trimmed to first 4 chars (max length = 4).",
+    "@participantFeedbackNameTrimmed": {
+        "description": "Participant name trimmed warning"
+    },
+    
+    "participantFeedbackFailedToCreate": "Failed to add participant: {error}",
+    "@participantFeedbackFailedToCreate": {
+        "description": "Failed to create participant error message",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Network error"
+            }
+        }
+    },
+    
+    "participantFeedbackFailedToUpdate": "Failed to update participant: {error}",
+    "@participantFeedbackFailedToUpdate": {
+        "description": "Failed to update participant error message",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Network error"
+            }
+        }
+    },
+    
+    "participantFeedbackFailedToQuery": "Failed to query participant: {error}",
+    "@participantFeedbackFailedToQuery": {
+        "description": "Failed to query participant error message",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Network error"
+            }
+        }
+    },
+    
+    "@@_REGISTRATION_MODULE_END_MARKER": "========================================"
+}

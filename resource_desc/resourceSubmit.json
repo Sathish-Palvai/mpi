@@ -1,0 +1,162 @@
+{
+    "RegistrationData": {
+        "ProcessingStatistics": {
+            "@Received": "1",
+            "@Valid": "1",
+            "@Invalid": "0",
+            "@Successful": "1",
+            "@Unsuccessful": "0",
+            "@ProcessingTimeMs": "43",
+            "@TransactionId": "CE3D5DC0",
+            "@TimeStamp": "Sat Apr 13 05:13:12 JST 2024",
+            "@XmlTimeStamp": "2024-04-13T05:13:12.982+09:00"
+        },
+        "RegistrationSubmit": {
+            "Messages": {
+                "Information": {
+                    "@Code": "MPRCMN@I@RET-PASS",
+                    "#text": "Successfully retrieved the Participant Validity."
+                }
+            },
+            "Resource": {
+                "ParticipantName": "D001",
+                "ResourceName": "RNAME",
+                "ResourceType": "01",
+                "Area": "03",
+                "StartDate": "2019-01-01",
+                "EndDate": "2019-12-31",
+                "SystemCode": "SYSC1",
+                "ResourceShortName": "電源等略称",
+                "ResourceLongName": "電源等名称",
+                "BgCode": "BC123",
+                "CommandOperationMethod": "2",
+                "PowerSupplyIContractCapacity": "1234567",
+                "Address": "住所",
+                "PayeePhonePart1": "12345",
+                "PayeePhonePart2": "1234",
+                "PayeePhonePart3": "1234",
+                "ContractType": "1",
+                "VenId": "Abc123",
+                "MarketContext": "MarketContext123",
+                "ModelName": "コメント",
+                "RatedCapacity": "2000",
+                "RatedVoltage": "352.7",
+                "ContinuousOperationVoltage": "16",
+                "RatedPowerFactor": "10.3",
+                "Frequency": "50",
+                "InPlantRate": "所内率",
+                "ContinuousOperationFrequencyLower": "47.1",
+                "ContinuousOperationFrequencyUpper": "54.2",
+                "BlackStart": "0",
+                "RatedOutput": "1234567",
+                "MinimumOutput": "1234567",
+                "AuthorizedMaximumOutput": "1234567",
+                "ThermalType": "1",
+                "ContinuousOperationTimeLimited": "17.5",
+                "FcbOperation": "1",
+                "OverPowerOperation": "1",
+                "PeakModeOperation": "1",
+                "Dss": "1",
+                "OverPowerOperationMaximumOutput": "1234567",
+                "PeakModeOperationMaximumOutput": "1234567",
+                "OperationTime": "17.9",
+                "NumberOfStartups": "1000",
+                "AfcMinimumOutput": "1234567",
+                "GfVariationRate": "12.6",
+                "CommodityCategory": "3200",
+                "ResponseTime": "12:17:30",
+                "ContinuousTime": "00:59:59",
+                "MaximumSupplyQuantity": "1000",
+                "Transfer": "false",
+                "PreviousParticipantName": "D002",
+                "PreviousResourceName": "RNAME2",
+                "RecordStatus": "WORKING",
+                "TransactionId": "7qxN1BPw",
+                "OutputBand": {
+                    "OutputBandInfo": [
+                        {
+                            "Output": "1234567",
+                            "GfWidth": "1234567",
+                            "AfcWidth": "1234567",
+                            "AfcVariationSpeed": "1234567",
+                            "OtmVariationSpeed": "1234567",
+                            "AfcOtmVariationSpeed": "1234567"
+                        }
+                    ]
+                },
+                "SwitchOutput": {
+                    "SwitchOutputInfo": {
+                        "Output": "1234567",
+                        "SwitchTime": "16"
+                    }
+                },
+                "OutputRangeBelowAfc": {
+                    "OutputRangeBelowAfcInfo": {
+                        "Output": "1234567",
+                        "OperationTime": "17.9",
+                        "OutputVariationSpeed": "1234567"
+                    }
+                },
+                "StartupPattern": {
+                    "StartupPatternInfo": {
+                        "PatternName": "パターン名",
+                        "StartupPatternEvent": [
+                            {
+                                "EventName": "1",
+                                "ChangeTime": "-10: 49",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "2",
+                                "ChangeTime": "10: 30",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "3",
+                                "ChangeTime": "20: 30",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "4",
+                                "ChangeTime": "60: 59",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "5",
+                                "ChangeTime": "-30: 40",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "6",
+                                "ChangeTime": "-20: 40",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "25",
+                                "ChangeTime": "60: 59",
+                                "Output": "1234567"
+                            }
+                        ]
+                    }
+                },
+                "StopPattern": {
+                    "StopPatternInfo": {
+                        "PatternName": "パターン名",
+                        "StopPatternEvent": [
+                            {
+                                "EventName": "1",
+                                "ChangeTime": "-70: 30",
+                                "Output": "1234567"
+                            },
+                            {
+                                "EventName": "21",
+                                "ChangeTime": "-01: 20",
+                                "Output": "1234567"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

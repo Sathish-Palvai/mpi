@@ -1,0 +1,790 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../shared/widgets/app_drawer.dart';
+import '../../../widgets/notification_icon.dart';
+import '../bloc/dashboard_bloc.dart';
+import '../bloc/dashboard_event.dart';
+
+/// Field type enum for different input types
+enum FieldType {
+  text,
+  number,
+  date,
+  select,
+  multiline,
+  phone,
+}
+
+/// Field configuration class
+class FormFieldConfig {
+  final String id;
+  final String label;
+  final FieldType type;
+  final int flex; // For col-span equivalent
+  final int? minLength;
+  final int? maxLength;
+  final bool required;
+  final bool readonly;
+  final bool visible;
+  final String? placeholder;
+  final RegExp? pattern;
+  final String? patternMessage;
+  final List<String>? selectOptions;
+  final String? initialValue;
+  final bool showLabel;
+  final String? alias; // For custom label override
+  final TextInputType? keyboardType;
+
+  const FormFieldConfig({
+    required this.id,
+    required this.label,
+    this.type = FieldType.text,
+    this.flex = 1,
+    this.minLength,
+    this.maxLength,
+    this.required = true,
+    this.readonly = false,
+    this.visible = true,
+    this.placeholder,
+    this.pattern,
+    this.patternMessage,
+    this.selectOptions,
+    this.initialValue,
+    this.showLabel = true,
+    this.alias,
+    this.keyboardType,
+  });
+
+  /// Create a copy with modified properties
+  FormFieldConfig copyWith({
+    String? id,
+    String? label,
+    FieldType? type,
+    int? flex,
+    int? minLength,
+    int? maxLength,
+    bool? required,
+    bool? readonly,
+    bool? visible,
+    String? placeholder,
+    RegExp? pattern,
+    String? patternMessage,
+    List<String>? selectOptions,
+    String? initialValue,
+    bool? showLabel,
+    String? alias,
+    TextInputType? keyboardType,
+  }) {
+    return FormFieldConfig(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      type: type ?? this.type,
+      flex: flex ?? this.flex,
+      minLength: minLength ?? this.minLength,
+      maxLength: maxLength ?? this.maxLength,
+      required: required ?? this.required,
+      readonly: readonly ?? this.readonly,
+      visible: visible ?? this.visible,
+      placeholder: placeholder ?? this.placeholder,
+      pattern: pattern ?? this.pattern,
+      patternMessage: patternMessage ?? this.patternMessage,
+      selectOptions: selectOptions ?? this.selectOptions,
+      initialValue: initialValue ?? this.initialValue,
+      showLabel: showLabel ?? this.showLabel,
+      alias: alias ?? this.alias,
+      keyboardType: keyboardType ?? this.keyboardType,
+    );
+  }
+}
+
+/// Configuration for form sections (rows)
+class FormSectionConfig {
+  final List<FormFieldConfig> fields;
+  final String? title;
+
+  const FormSectionConfig({
+    required this.fields,
+    this.title,
+  });
+}
+
+/// Participant form schema definition
+class ParticipantFormSchema {
+  // Common patterns
+  static final participantNamePattern = RegExp(r'^[A-Z0-9]{4}$');
+  static final japaneseStringPattern = RegExp(r'^[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAFa-zA-Z0-9\s]+$');
+  static final numberPattern = RegExp(r'^\d+$');
+
+  /// Get form configuration for upsert (create/update) fields
+  static List<FormSectionConfig> getUpsertSections() {
+    return [
+      // Section 1: Basic Information
+      FormSectionConfig(
+        title: 'Basic Information',
+        fields: [
+          FormFieldConfig(
+            id: 'ParticipantName',
+            label: 'Participant Name',
+            flex: 2,
+            minLength: 4,
+            maxLength: 4,
+            readonly: true,
+            placeholder: 'ParticipantName',
+            pattern: participantNamePattern,
+            patternMessage: 'Must be 4 uppercase letters or numbers',
+          ),
+          FormFieldConfig(
+            id: 'ParticipantType',
+            label: 'Participant Type',
+            flex: 2,
+            readonly: true,
+            initialValue: 'BALANCING_SERVICE_PROVIDER',
+          ),
+        ],
+      ),
+      
+      // Section 2: Area and Dates
+      FormSectionConfig(
+        fields: [
+          FormFieldConfig(
+            id: 'Area',
+            label: 'Area',
+            type: FieldType.select,
+            flex: 2,
+            visible: false,
+            readonly: true,
+            selectOptions: [
+              'HOKKAIDO',
+              'TOHOKU',
+              'TOKYO',
+              'CHUBU',
+              'HOKURIKU',
+              'KANSAI',
+              'CHUGOKU',
+              'SHIKOKU',
+              'KYUSHU',
+              'OKINAWA',
+            ],
+          ),
+          FormFieldConfig(
+            id: 'StartDate',
+            label: 'Start Date',
+            type: FieldType.date,
+            flex: 1,
+            minLength: 10,
+            maxLength: 10,
+          ),
+          FormFieldConfig(
+            id: 'EndDate',
+            label: 'End Date',
+            type: FieldType.date,
+            flex: 1,
+            readonly: true,
+            required: false,
+          ),
+        ],
+      ),
+
+      // Section 3: Company Information
+      FormSectionConfig(
+        title: 'Company Information',
+        fields: [
+          FormFieldConfig(
+            id: 'CompanyShortName',
+            label: 'Company Short Name',
+            flex: 2,
+            minLength: 1,
+            maxLength: 10,
+            placeholder: 'CompanyShortName',
+            pattern: japaneseStringPattern,
+            patternMessage: 'Invalid characters in company short name',
+          ),
+          FormFieldConfig(
+            id: 'CompanyLongName',
+            label: 'Company Long Name',
+            flex: 4,
+            minLength: 1,
+            maxLength: 50,
+            placeholder: 'CompanyLongName',
+            pattern: japaneseStringPattern,
+            patternMessage: 'Invalid characters in company long name',
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// Get form configuration for other controls (phone, etc.)
+  static List<FormSectionConfig> getOtherControlsSections() {
+    return [
+      FormSectionConfig(
+        title: 'Contact Information',
+        fields: [
+          FormFieldConfig(
+            id: 'PhonePart1',
+            label: 'Phone Number',
+            type: FieldType.phone,
+            flex: 3,
+            minLength: 1,
+            maxLength: 5,
+            placeholder: 'PhonePart1',
+            pattern: numberPattern,
+            alias: 'Phone Part 1',
+            keyboardType: TextInputType.phone,
+          ),
+          FormFieldConfig(
+            id: 'PhonePart2',
+            label: 'PhonePart2',
+            type: FieldType.phone,
+            flex: 3,
+            minLength: 0,
+            maxLength: 4,
+            placeholder: 'PhonePart2',
+            pattern: numberPattern,
+            showLabel: false,
+            required: false,
+            keyboardType: TextInputType.phone,
+          ),
+          FormFieldConfig(
+            id: 'PhonePart3',
+            label: 'PhonePart3',
+            type: FieldType.phone,
+            flex: 3,
+            minLength: 0,
+            maxLength: 4,
+            placeholder: 'PhonePart3',
+            pattern: numberPattern,
+            showLabel: false,
+            required: false,
+            keyboardType: TextInputType.phone,
+          ),
+        ],
+      ),
+      
+      FormSectionConfig(
+        fields: [
+          FormFieldConfig(
+            id: 'TransactionId',
+            label: 'Transaction ID',
+            flex: 1,
+            readonly: true,
+            required: false,
+            visible: false,
+            minLength: 0,
+            maxLength: 10,
+            placeholder: 'TransactionId',
+          ),
+        ],
+      ),
+    ];
+  }
+}
+
+/// Config-driven participant detail screen
+class ConfigDrivenParticipantScreen extends StatefulWidget {
+  final Map<String, dynamic> participant;
+
+  const ConfigDrivenParticipantScreen({
+    super.key,
+    required this.participant,
+  });
+
+  @override
+  State<ConfigDrivenParticipantScreen> createState() =>
+      _ConfigDrivenParticipantScreenState();
+}
+
+class _ConfigDrivenParticipantScreenState
+    extends State<ConfigDrivenParticipantScreen> {
+  static const double _fieldSpacing = 18.0;
+  static const double _labelFontDelta = 3.0;
+
+  final _formKey = GlobalKey<FormState>();
+  final Map<String, TextEditingController> _controllers = {};
+
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeControllers();
+  }
+
+  @override
+  void dispose() {
+    // Dispose all controllers
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  /// Initialize controllers based on form schema
+  void _initializeControllers() {
+    final allSections = [
+      ...ParticipantFormSchema.getUpsertSections(),
+      ...ParticipantFormSchema.getOtherControlsSections(),
+    ];
+
+    for (var section in allSections) {
+      for (var field in section.fields) {
+        final controller = TextEditingController(
+          text: widget.participant[field.id]?.toString() ?? 
+                field.initialValue ?? 
+                '',
+        );
+        _controllers[field.id] = controller;
+      }
+    }
+  }
+
+  /// Build input decoration
+  InputDecoration _inputDecoration({
+    required String labelText,
+    String? hintText,
+    bool enabled = true,
+    bool showLabel = true,
+  }) {
+    final theme = Theme.of(context);
+    final baseLabelStyle =
+        theme.inputDecorationTheme.labelStyle ?? theme.textTheme.labelMedium;
+    final double targetSize =
+        ((baseLabelStyle?.fontSize) ?? 14) + _labelFontDelta;
+    final labelStyle = baseLabelStyle?.copyWith(fontSize: targetSize) ??
+        TextStyle(fontSize: targetSize);
+
+    return InputDecoration(
+      labelText: showLabel ? labelText : null,
+      hintText: hintText,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      labelStyle: labelStyle,
+      floatingLabelStyle: labelStyle.copyWith(fontWeight: FontWeight.w600),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      filled: true,
+      fillColor: enabled
+          ? theme.colorScheme.surfaceVariant.withOpacity(.6)
+          : theme.colorScheme.surfaceVariant.withOpacity(.3),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      enabled: enabled,
+    );
+  }
+
+  /// Build validator from field config
+  String? Function(String?)? _buildValidator(FormFieldConfig config) {
+    return (value) {
+      // Required validation
+      if (config.required && (value == null || value.trim().isEmpty)) {
+        return '${config.alias ?? config.label} is required';
+      }
+
+      // Skip other validations if empty and not required
+      if (value == null || value.trim().isEmpty) {
+        return null;
+      }
+
+      // Min length validation
+      if (config.minLength != null && value.length < config.minLength!) {
+        return 'Minimum ${config.minLength} characters required';
+      }
+
+      // Max length validation (redundant with maxLength property but explicit)
+      if (config.maxLength != null && value.length > config.maxLength!) {
+        return 'Maximum ${config.maxLength} characters allowed';
+      }
+
+      // Pattern validation
+      if (config.pattern != null && !config.pattern!.hasMatch(value)) {
+        return config.patternMessage ?? 'Invalid format for ${config.label}';
+      }
+
+      return null;
+    };
+  }
+
+  /// Build a single field widget based on configuration
+  Widget _buildField(FormFieldConfig config) {
+    if (!config.visible) {
+      return const SizedBox.shrink();
+    }
+
+    final controller = _controllers[config.id]!;
+    final displayLabel = config.alias ?? config.label;
+
+    switch (config.type) {
+      case FieldType.date:
+        return TextFormField(
+          controller: controller,
+          decoration: _inputDecoration(
+            labelText: displayLabel,
+            hintText: 'YYYY-MM-DD',
+            enabled: !config.readonly,
+            showLabel: config.showLabel,
+          ),
+          readOnly: true,
+          onTap: config.readonly ? null : () => _pickDate(controller),
+          validator: _buildValidator(config),
+        );
+
+      case FieldType.select:
+        return DropdownButtonFormField<String>(
+          value: controller.text.isNotEmpty ? controller.text : null,
+          decoration: _inputDecoration(
+            labelText: displayLabel,
+            enabled: !config.readonly,
+            showLabel: config.showLabel,
+          ),
+          items: config.selectOptions
+              ?.map((option) => DropdownMenuItem(
+                    value: option,
+                    child: Text(option),
+                  ))
+              .toList(),
+          onChanged: config.readonly
+              ? null
+              : (value) {
+                  setState(() {
+                    controller.text = value ?? '';
+                  });
+                },
+          validator: _buildValidator(config),
+        );
+
+      case FieldType.multiline:
+        return TextFormField(
+          controller: controller,
+          decoration: _inputDecoration(
+            labelText: displayLabel,
+            hintText: config.placeholder,
+            enabled: !config.readonly,
+            showLabel: config.showLabel,
+          ),
+          keyboardType: TextInputType.multiline,
+          minLines: 2,
+          maxLines: 4,
+          maxLength: config.maxLength,
+          readOnly: config.readonly,
+          validator: _buildValidator(config),
+        );
+
+      case FieldType.phone:
+        return TextFormField(
+          controller: controller,
+          decoration: _inputDecoration(
+            labelText: displayLabel,
+            hintText: config.placeholder,
+            enabled: !config.readonly,
+            showLabel: config.showLabel,
+          ),
+          keyboardType: config.keyboardType ?? TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            if (config.maxLength != null)
+              LengthLimitingTextInputFormatter(config.maxLength),
+          ],
+          maxLength: config.maxLength,
+          readOnly: config.readonly,
+          validator: _buildValidator(config),
+        );
+
+      case FieldType.number:
+        return TextFormField(
+          controller: controller,
+          decoration: _inputDecoration(
+            labelText: displayLabel,
+            hintText: config.placeholder,
+            enabled: !config.readonly,
+            showLabel: config.showLabel,
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            if (config.maxLength != null)
+              LengthLimitingTextInputFormatter(config.maxLength),
+          ],
+          maxLength: config.maxLength,
+          readOnly: config.readonly,
+          validator: _buildValidator(config),
+        );
+
+      case FieldType.text:
+        return TextFormField(
+          controller: controller,
+          decoration: _inputDecoration(
+            labelText: displayLabel,
+            hintText: config.placeholder,
+            enabled: !config.readonly,
+            showLabel: config.showLabel,
+          ),
+          keyboardType: config.keyboardType,
+          maxLength: config.maxLength,
+          readOnly: config.readonly,
+          validator: _buildValidator(config),
+        );
+    }
+  }
+
+  /// Build a row of fields with responsive layout
+  Widget _buildFieldRow(List<FormFieldConfig> fields) {
+    // Filter visible fields
+    final visibleFields = fields.where((f) => f.visible).toList();
+    
+    if (visibleFields.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: _fieldSpacing),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Mobile layout (< 600px): stack vertically
+          if (constraints.maxWidth < 600) {
+            return Column(
+              children: visibleFields
+                  .map((field) => Padding(
+                        padding: const EdgeInsets.only(bottom: _fieldSpacing / 2),
+                        child: _buildField(field),
+                      ))
+                  .toList(),
+            );
+          }
+
+          // Desktop layout: use Row with flex
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: visibleFields.asMap().entries.map((entry) {
+              final index = entry.key;
+              final field = entry.value;
+              return Expanded(
+                flex: field.flex,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: index < visibleFields.length - 1 ? 12 : 0,
+                  ),
+                  child: _buildField(field),
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Build a section with optional title
+  Widget _buildSection(FormSectionConfig section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (section.title != null) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, top: 8),
+            child: Text(
+              section.title!,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+          ),
+        ],
+        _buildFieldRow(section.fields),
+      ],
+    );
+  }
+
+  /// Date picker helper
+  Future<void> _pickDate(TextEditingController controller) async {
+    final now = DateTime.now();
+    final initial = controller.text.isNotEmpty
+        ? DateTime.tryParse(controller.text) ?? now
+        : now;
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5, 1, 1),
+      lastDate: DateTime(now.year + 5, 12, 31),
+      initialDate: initial,
+      helpText: 'Select Date',
+      fieldHintText: 'YYYY-MM-DD',
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+    );
+    if (picked != null) {
+      final value =
+          '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      setState(() => controller.text = value);
+    }
+  }
+
+  /// Save form data
+  Future<void> _saveParticipant() async {
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fix validation errors'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      // Build payload from controllers
+      final Map<String, dynamic> payload = {};
+      _controllers.forEach((key, controller) {
+        payload[key] = controller.text;
+      });
+
+      // Simulate save operation
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Participant saved successfully! Payload: ${payload.toString()}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+
+        // Refresh dashboard
+        context.read<DashboardBloc>().add(LoadDashboardData());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Scaffold(
+      drawer: const AppDrawer(),
+      backgroundColor: theme.colorScheme.surface,
+      appBar: AppBar(
+        title: const Text('Config-Driven Participant Details'),
+        elevation: 0,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        actions: [
+          const SizedBox(width: 8),
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: SizedBox(width: 40, height: 40, child: NotificationIcon()),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Info card
+              Card(
+                elevation: 2,
+                color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, 
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'This is a config-driven form. All fields are generated from schema definitions.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Render all upsert sections
+              ...ParticipantFormSchema.getUpsertSections()
+                  .map((section) => _buildSection(section)),
+
+              const SizedBox(height: 24),
+
+              // Render other controls sections
+              ...ParticipantFormSchema.getOtherControlsSections()
+                  .map((section) => _buildSection(section)),
+
+              const SizedBox(height: 32),
+
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () {
+                              _formKey.currentState?.reset();
+                              for (var controller in _controllers.values) {
+                                controller.clear();
+                              }
+                            },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reset'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isSubmitting ? null : _saveParticipant,
+                      icon: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(_isSubmitting ? 'Saving...' : 'Save'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

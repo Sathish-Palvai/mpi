@@ -1,0 +1,255 @@
+{
+    "@@locale": "es",
+    
+    "appTitle": "Interfaz de Gestión Energética",
+    
+    "login": "Iniciar Sesión",
+    
+    "username": "Usuario",
+    
+    "password": "Contraseña",
+    
+    "userType": "Tipo de Usuario",
+    
+    "userTypeBsp": "BSP - Proveedor de Servicios de Balance",
+    
+    "userTypeTso": "TSO - Operador del Sistema de Transmisión",
+    
+    "userTypeMo": "MO - Operador del Mercado",
+    
+    "home": "Inicio",
+    
+    "dashboard": "Tablero",
+    
+    "registration": "Registro",
+    
+    "interface": "Interfaz",
+    
+    "switching": "Conmutación",
+    
+    "reports": "Informes",
+    
+    "settings": "Configuración",
+    
+    "logout": "Cerrar Sesión",
+    
+    "cancel": "Cancelar",
+    
+    "confirm": "Confirmar",
+    
+    "welcomeMessage": "¡Bienvenido de vuelta, {username}!",
+    
+    "welcomeSubtitle": "Gestiona las operaciones de tu sistema energético de manera eficiente",
+    
+    "quickAccess": "Acceso Rápido",
+    
+    "recentActivity": "Actividad Reciente",
+    
+    "welcomeBack": "Bienvenido de Vuelta",
+    
+    "signInToAccount": "Inicia sesión en tu cuenta",
+    
+    "enterUsername": "Ingresa tu usuario",
+    
+    "enterPassword": "Ingresa tu contraseña",
+    
+    "signIn": "Iniciar Sesión",
+    
+    "signingIn": "Iniciando Sesión...",
+    
+    "demoCredentials": "Credenciales de Demostración",
+    
+    "usernameRequired": "Por favor ingresa tu usuario",
+    
+    "usernameMinLength": "El usuario debe tener al menos 3 caracteres",
+    
+    "passwordRequired": "Por favor ingresa tu contraseña",
+    
+    "passwordMinLength": "La contraseña debe tener al menos 6 caracteres",
+    
+    "confirmLogout": "Confirmar Cierre de Sesión",
+    
+    "logoutConfirmation": "¿Estás seguro de que quieres cerrar sesión?",
+    
+    "registrationManagement": "Gestión de Registros",
+    
+    "registrationSubtitle": "Gestiona registros de usuarios e información de participantes",
+    
+    "systemInterface": "Interfaz del Sistema",
+    
+    "interfaceSubtitle": "Monitorea y gestiona interfaces y conexiones del sistema",
+    
+    "powerSwitching": "Conmutación Energética",
+    
+    "switchingSubtitle": "Gestiona operaciones de conmutación energética y configuraciones",
+    
+    "analyticsReports": "Análisis e Informes",
+    
+    "reportsSubtitle": "Ve análisis detallados y genera informes comprehensivos",
+    
+    "settingsSubtitle": "Configura ajustes de la aplicación y preferencias",
+    
+    "comingSoon": "Próximamente",
+    
+    "featureInDevelopment": "Esta función está en desarrollo y estará disponible pronto.",
+    
+    "userInformation": "Información del Usuario",
+    
+    "loginTime": "Hora de Inicio de Sesión",
+    
+    "notifications": "Notificaciones",
+    
+    "registrationCardSubtitle": "Gestionar registros",
+    
+    "interfaceCardSubtitle": "Interfaces del sistema",
+    
+    "switchingCardSubtitle": "Conmutación energética",
+    
+    "reportsCardSubtitle": "Análisis e información",
+    
+    "newRegistrationSubmitted": "Nuevo registro enviado",
+    
+    "switchingOperationCompleted": "Operación de conmutación completada",
+    
+    "monthlyReportGenerated": "Informe mensual generado",
+    
+    "language": "Idioma",
+    
+    "managePowerSystemOperations": "Gestiona eficientemente las operaciones de tu sistema eléctrico",
+    
+    "manageRegistrations": "Gestionar registros",
+    
+    "systemInterfaces": "Interfaces del sistema",
+    
+    "powerSwitching": "Conmutación de energía",
+    
+    "analyticsInsights": "Análisis e informes",
+    
+    "quickAccess": "Acceso Rápido",
+    
+    "hoursAgo": "horas atrás",
+    
+    "dayAgo": "día atrás",
+    
+    "confirmLogout": "Confirmar Cierre de Sesión",
+    
+    "areYouSureLogout": "¿Estás seguro de que quieres cerrar sesión?",
+    
+    "configureAppSettings": "Configura los ajustes y preferencias de la aplicación",
+    
+    "theme": "Tema",
+    
+    "chooseAppearance": "Elige tu apariencia preferida",
+    
+    "lightTheme": "Tema Claro",
+    
+    "lightThemeDescription": "Interfaz limpia y brillante",
+    
+    "darkTheme": "Tema Oscuro",
+    
+    "darkThemeDescription": "Suave para los ojos en poca luz",
+    
+    "systemTheme": "Tema del Sistema",
+    
+    "systemThemeDescription": "Sigue la configuración del dispositivo",
+    
+    "chooseLanguage": "Elige tu idioma preferido",
+    
+    "about": "Acerca de",
+    
+    "appName": "Nombre de la App",
+    
+    "version": "Versión",
+    
+    "developer": "Desarrollador",
+    
+    "createAccount": "Crear Cuenta",
+    
+    "joinOurPlatform": "Únete a nuestra plataforma para acceder a servicios de participantes del mercado",
+    
+    "personalInformation": "Información Personal",
+    
+    "fullName": "Nombre Completo",
+    
+    "enterFullName": "Ingresa tu nombre completo",
+    
+    "email": "Correo Electrónico",
+    
+    "enterEmail": "Ingresa tu dirección de correo electrónico",
+    
+    "phoneNumber": "Número de Teléfono",
+    
+    "enterPhoneNumber": "Ingresa tu número de teléfono (opcional)",
+    
+    "accountDetails": "Detalles de la Cuenta",
+    
+    "username": "Nombre de Usuario",
+    
+    "enterUniqueUsername": "Ingresa un nombre de usuario único",
+    
+    "password": "Contraseña",
+    
+    "enterSecurePassword": "Ingresa una contraseña segura",
+    
+    "confirmPassword": "Confirmar Contraseña",
+    
+    "reenterPassword": "Vuelve a ingresar tu contraseña",
+    
+    "organizationDetails": "Detalles de la Organización",
+    
+    "userType": "Tipo de Usuario",
+    
+    "selectUserType": "Selecciona tu tipo de usuario",
+    
+    "companyOrganization": "Empresa/Organización",
+    
+    "enterCompanyName": "Ingresa el nombre de tu empresa u organización",
+    
+    "register": "Registrarse",
+    
+    "registering": "Registrando...",
+    
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    
+    "fullNameRequired": "Por favor ingresa tu nombre completo",
+    
+    "emailRequired": "Por favor ingresa tu dirección de correo electrónico",
+    
+    "emailInvalid": "Por favor ingresa una dirección de correo electrónico válida",
+    
+    "usernameInvalid": "El nombre de usuario debe tener 3-20 caracteres, solo alfanumérico",
+    
+    "passwordComplexity": "La contraseña debe tener al menos 8 caracteres con mayúscula, minúscula y número",
+    
+    "passwordMismatch": "Las contraseñas no coinciden",
+    
+    "phoneInvalid": "Por favor ingresa un número de teléfono válido",
+    
+    "companyRequired": "Por favor ingresa el nombre de tu empresa u organización",
+    
+    "registrationSuccess": "¡Registro exitoso! Por favor inicia sesión.",
+    
+    "registrationFailed": "Registro fallido. Por favor intenta de nuevo.",
+    
+    "dontHaveAccount": "¿No tienes una cuenta?",
+    
+    "userManagement": "Gestión de Usuarios",
+    
+    "addUser": "Agregar Usuario",
+    
+    "usersList": "Lista de Usuarios",
+    
+    "addNewUser": "Agregar Nuevo Usuario",
+    
+    "addUserToSystem": "Agregar un nuevo usuario al sistema",
+    
+    "systemUsers": "Usuarios del Sistema",
+    
+    "refreshList": "Actualizar Lista",
+    
+    "noUsersFound": "No se encontraron usuarios",
+    
+    "enterUserPassword": "Ingresa la contraseña del usuario",
+    
+    "addingUser": "Agregando Usuario..."
+}

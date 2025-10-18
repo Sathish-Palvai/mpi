@@ -1,0 +1,894 @@
+{
+    "@@locale": "en",
+    
+    "appTitle": "Power Management Interface",
+    "@appTitle": {
+        "description": "Application title"
+    },
+    
+    "login": "Login",
+    "@login": {
+        "description": "Login button text"
+    },
+    
+    "username": "Username",
+    "@username": {
+        "description": "Username field label"
+    },
+    
+    "password": "Password",
+    "@password": {
+        "description": "Password field label"
+    },
+    
+    "userType": "User Type",
+    "@userType": {
+        "description": "User type field label"
+    },
+    
+    "userTypeBsp": "BSP - Balancing Service Provider",
+    "@userTypeBsp": {
+        "description": "BSP user type description"
+    },
+    
+    "userTypeTso": "TSO - Transmission System Operator",
+    "@userTypeTso": {
+        "description": "TSO user type description"
+    },
+    
+    "userTypeMo": "MO - Market Operator",
+    "@userTypeMo": {
+        "description": "MO user type description"
+    },
+    
+    "home": "Home",
+    "@home": {
+        "description": "Home navigation item"
+    },
+    
+    "dashboard": "Dashboard",
+    "@dashboard": {
+        "description": "Dashboard title"
+    },
+    
+    "registration": "Registration",
+    "@registration": {
+        "description": "Registration navigation item"
+    },
+    
+    "interface": "Interface",
+    "@interface": {
+        "description": "Interface navigation item"
+    },
+    
+    "switching": "Switching",
+    "@switching": {
+        "description": "Switching navigation item"
+    },
+    
+    "reports": "Reports",
+    "@reports": {
+        "description": "Reports navigation item"
+    },
+    
+    "settings": "Settings",
+    "@settings": {
+        "description": "Settings navigation item"
+    },
+    
+    "logout": "Logout",
+    "@logout": {
+        "description": "Logout button text"
+    },
+    
+    "cancel": "Cancel",
+    "@cancel": {
+        "description": "Cancel button text"
+    },
+    
+    "confirm": "Confirm",
+    "@confirm": {
+        "description": "Confirm button text"
+    },
+    
+    "welcomeMessage": "Welcome back, {username}!",
+    "@welcomeMessage": {
+        "description": "Welcome message with username",
+        "placeholders": {
+            "username": {
+                "type": "String",
+                "example": "John"
+            }
+        }
+    },
+    
+    "welcomeSubtitle": "Manage your power system operations efficiently",
+    "@welcomeSubtitle": {
+        "description": "Welcome subtitle"
+    },
+    
+    "quickAccess": "Quick Access",
+    "@quickAccess": {
+        "description": "Quick access section title"
+    },
+    
+    "recentActivity": "Recent Activity",
+    "@recentActivity": {
+        "description": "Recent activity section title"
+    },
+    
+    "welcomeBack": "Welcome Back",
+    "@welcomeBack": {
+        "description": "Welcome back title"
+    },
+    
+    "signInToAccount": "Sign in to your account",
+    "@signInToAccount": {
+        "description": "Sign in subtitle"
+    },
+    
+    "enterUsername": "Enter your username",
+    "@enterUsername": {
+        "description": "Username field hint"
+    },
+    
+    "enterPassword": "Enter your password",
+    "@enterPassword": {
+        "description": "Password field hint"
+    },
+    
+    "signIn": "Sign In",
+    "@signIn": {
+        "description": "Sign in button text"
+    },
+    
+    "signingIn": "Signing In...",
+    "@signingIn": {
+        "description": "Signing in loading text"
+    },
+    
+    "demoCredentials": "Demo Credentials",
+    "@demoCredentials": {
+        "description": "Demo credentials section title"
+    },
+    
+    "usernameRequired": "Please enter your username",
+    "@usernameRequired": {
+        "description": "Username validation error"
+    },
+    
+    "usernameMinLength": "Username must be at least 3 characters",
+    "@usernameMinLength": {
+        "description": "Username minimum length validation"
+    },
+    
+    "passwordRequired": "Please enter your password",
+    "@passwordRequired": {
+        "description": "Password validation error"
+    },
+    
+    "passwordMinLength": "Password must be at least 6 characters",
+    "@passwordMinLength": {
+        "description": "Password minimum length validation"
+    },
+    
+    "confirmLogout": "Confirm Logout",
+    "@confirmLogout": {
+        "description": "Logout confirmation dialog title"
+    },
+    
+    "logoutConfirmation": "Are you sure you want to logout?",
+    "@logoutConfirmation": {
+        "description": "Logout confirmation message"
+    },
+    
+    "registrationManagement": "Registration Management",
+    "@registrationManagement": {
+        "description": "Registration screen title"
+    },
+    
+    "registrationSubtitle": "Manage user registrations and participant information",
+    "@registrationSubtitle": {
+        "description": "Registration screen subtitle"
+    },
+    
+    "systemInterface": "System Interface",
+    "@systemInterface": {
+        "description": "Interface screen title"
+    },
+    
+    "interfaceSubtitle": "Monitor and manage system interfaces and connections",
+    "@interfaceSubtitle": {
+        "description": "Interface screen subtitle"
+    },
+    
+    "powerSwitching": "Power Switching",
+    "@powerSwitching": {
+        "description": "Switching screen title"
+    },
+    
+    "switchingSubtitle": "Manage power switching operations and configurations",
+    "@switchingSubtitle": {
+        "description": "Switching screen subtitle"
+    },
+    
+    "analyticsReports": "Analytics & Reports",
+    "@analyticsReports": {
+        "description": "Reports screen title"
+    },
+    
+    "reportsSubtitle": "View detailed analytics and generate comprehensive reports",
+    "@reportsSubtitle": {
+        "description": "Reports screen subtitle"
+    },
+    
+    "settingsSubtitle": "Configure application settings and preferences",
+    "@settingsSubtitle": {
+        "description": "Settings screen subtitle"
+    },
+    
+    "comingSoon": "Coming Soon",
+    "@comingSoon": {
+        "description": "Coming soon text"
+    },
+    
+    "featureInDevelopment": "This feature is under development and will be available soon.",
+    "@featureInDevelopment": {
+        "description": "Feature in development message"
+    },
+    
+    "userInformation": "User Information",
+    "@userInformation": {
+        "description": "User information section title"
+    },
+    
+    "loginTime": "Login Time",
+    "@loginTime": {
+        "description": "Login time label"
+    },
+    
+    "notifications": "Notifications",
+    "@notifications": {
+        "description": "Notifications button tooltip"
+    },
+    
+    "registrationCardSubtitle": "Manage registrations",
+    "@registrationCardSubtitle": {
+        "description": "Registration card subtitle"
+    },
+    
+    "interfaceCardSubtitle": "System interfaces",
+    "@interfaceCardSubtitle": {
+        "description": "Interface card subtitle"
+    },
+    
+    "switchingCardSubtitle": "Power switching",
+    "@switchingCardSubtitle": {
+        "description": "Switching card subtitle"
+    },
+    
+    "reportsCardSubtitle": "Analytics & insights",
+    "@reportsCardSubtitle": {
+        "description": "Reports card subtitle"
+    },
+    
+    "newRegistrationSubmitted": "New registration submitted",
+    "@newRegistrationSubmitted": {
+        "description": "Activity: new registration"
+    },
+    
+    "switchingOperationCompleted": "Switching operation completed",
+    "@switchingOperationCompleted": {
+        "description": "Activity: switching operation"
+    },
+    
+    "monthlyReportGenerated": "Monthly report generated",
+    "@monthlyReportGenerated": {
+        "description": "Activity: report generated"
+    },
+    
+    "language": "Language",
+    "@language": {
+        "description": "Language setting label"
+    },
+    
+    "managePowerSystemOperations": "Manage your power system operations efficiently",
+    "@managePowerSystemOperations": {
+        "description": "Welcome message for power system operations"
+    },
+    
+    "manageRegistrations": "Manage registrations",
+    "@manageRegistrations": {
+        "description": "Subtitle for registration card"
+    },
+    
+    "systemInterfaces": "System interfaces",
+    "@systemInterfaces": {
+        "description": "Subtitle for interface card"
+    },
+    
+    "powerSwitching": "Power switching",
+    "@powerSwitching": {
+        "description": "Subtitle for switching card"
+    },
+    
+    "analyticsInsights": "Analytics & insights",
+    "@analyticsInsights": {
+        "description": "Subtitle for reports card"
+    },
+    
+    "quickAccess": "Quick Access",
+    "@quickAccess": {
+        "description": "Quick access section title"
+    },
+    
+    "hoursAgo": "hours ago",
+    "@hoursAgo": {
+        "description": "Time unit for activities"
+    },
+    
+    "dayAgo": "day ago",
+    "@dayAgo": {
+        "description": "Time unit for activities"
+    },
+    
+    "confirmLogout": "Confirm Logout",
+    "@confirmLogout": {
+        "description": "Logout confirmation dialog title"
+    },
+    
+    "areYouSureLogout": "Are you sure you want to logout?",
+    "@areYouSureLogout": {
+        "description": "Logout confirmation message"
+    },
+    
+    "configureAppSettings": "Configure application settings and preferences",
+    "@configureAppSettings": {
+        "description": "Settings page description"
+    },
+    
+    "theme": "Theme",
+    "@theme": {
+        "description": "Theme section title"
+    },
+    
+    "chooseAppearance": "Choose your preferred appearance",
+    "@chooseAppearance": {
+        "description": "Theme section description"
+    },
+    
+    "lightTheme": "Light Theme",
+    "@lightTheme": {
+        "description": "Light theme option"
+    },
+    
+    "lightThemeDescription": "Clean and bright interface",
+    "@lightThemeDescription": {
+        "description": "Light theme description"
+    },
+    
+    "darkTheme": "Dark Theme",
+    "@darkTheme": {
+        "description": "Dark theme option"
+    },
+    
+    "darkThemeDescription": "Easy on the eyes in low light",
+    "@darkThemeDescription": {
+        "description": "Dark theme description"
+    },
+    
+    "systemTheme": "System Theme",
+    "@systemTheme": {
+        "description": "System theme option"
+    },
+    
+    "systemThemeDescription": "Follows device settings",
+    "@systemThemeDescription": {
+        "description": "System theme description"
+    },
+    
+    "chooseLanguage": "Choose your preferred language",
+    "@chooseLanguage": {
+        "description": "Language section description"
+    },
+    
+    "about": "About",
+    "@about": {
+        "description": "About section title"
+    },
+    
+    "appName": "App Name",
+    "@appName": {
+        "description": "Application name label"
+    },
+    
+    "version": "Version",
+    "@version": {
+        "description": "Version label"
+    },
+    
+    "developer": "Developer",
+    "@developer": {
+        "description": "Developer label"
+    },
+    
+    "createAccount": "Create Account",
+    "@createAccount": {
+        "description": "Registration page title"
+    },
+    
+    "joinOurPlatform": "Join our platform to access market participant services",
+    "@joinOurPlatform": {
+        "description": "Registration page subtitle"
+    },
+    
+    "personalInformation": "Personal Information",
+    "@personalInformation": {
+        "description": "Personal information section title"
+    },
+    
+    "fullName": "Full Name",
+    "@fullName": {
+        "description": "Full name field label"
+    },
+    
+    "enterFullName": "Enter your full name",
+    "@enterFullName": {
+        "description": "Full name field hint"
+    },
+    
+    "email": "Email",
+    "@email": {
+        "description": "Email field label"
+    },
+    
+    "enterEmail": "Enter your email address",
+    "@enterEmail": {
+        "description": "Email field hint"
+    },
+    
+    "phoneNumber": "Phone Number",
+    "@phoneNumber": {
+        "description": "Phone number field label"
+    },
+    
+    "enterPhoneNumber": "Enter your phone number (optional)",
+    "@enterPhoneNumber": {
+        "description": "Phone number field hint"
+    },
+    
+    "accountDetails": "Account Details",
+    "@accountDetails": {
+        "description": "Account details section title"
+    },
+    
+    "username": "Username",
+    "@username": {
+        "description": "Username field label"
+    },
+    
+    "enterUniqueUsername": "Enter a unique username",
+    "@enterUniqueUsername": {
+        "description": "Username field hint"
+    },
+    
+    "password": "Password",
+    "@password": {
+        "description": "Password field label"
+    },
+    
+    "enterSecurePassword": "Enter a secure password",
+    "@enterSecurePassword": {
+        "description": "Password field hint"
+    },
+    
+    "confirmPassword": "Confirm Password",
+    "@confirmPassword": {
+        "description": "Confirm password field label"
+    },
+    
+    "reenterPassword": "Re-enter your password",
+    "@reenterPassword": {
+        "description": "Confirm password field hint"
+    },
+    
+    "organizationDetails": "Organization Details",
+    "@organizationDetails": {
+        "description": "Organization details section title"
+    },
+    
+    "userType": "User Type",
+    "@userType": {
+        "description": "User type field label"
+    },
+    
+    "selectUserType": "Select your user type",
+    "@selectUserType": {
+        "description": "User type field hint"
+    },
+    
+    "companyOrganization": "Company/Organization",
+    "@companyOrganization": {
+        "description": "Company field label"
+    },
+    
+    "enterCompanyName": "Enter your company or organization name",
+    "@enterCompanyName": {
+        "description": "Company field hint"
+    },
+    
+    "register": "Register",
+    "@register": {
+        "description": "Register button text"
+    },
+    
+    "registering": "Registering...",
+    "@registering": {
+        "description": "Registering loading text"
+    },
+    
+    "alreadyHaveAccount": "Already have an account?",
+    "@alreadyHaveAccount": {
+        "description": "Login link prefix text"
+    },
+    
+    "fullNameRequired": "Please enter your full name",
+    "@fullNameRequired": {
+        "description": "Full name validation error"
+    },
+    
+    "emailRequired": "Please enter your email address",
+    "@emailRequired": {
+        "description": "Email validation error"
+    },
+    
+    "emailInvalid": "Please enter a valid email address",
+    "@emailInvalid": {
+        "description": "Email format validation error"
+    },
+    
+    "usernameInvalid": "Username must be 3-20 characters, alphanumeric only",
+    "@usernameInvalid": {
+        "description": "Username format validation error"
+    },
+    
+    "passwordComplexity": "Password must be at least 8 characters with uppercase, lowercase, and number",
+    "@passwordComplexity": {
+        "description": "Password complexity validation error"
+    },
+    
+    "passwordMismatch": "Passwords do not match",
+    "@passwordMismatch": {
+        "description": "Password confirmation validation error"
+    },
+    
+    "phoneInvalid": "Please enter a valid phone number",
+    "@phoneInvalid": {
+        "description": "Phone number validation error"
+    },
+    
+    "companyRequired": "Please enter your company or organization name",
+    "@companyRequired": {
+        "description": "Company validation error"
+    },
+    
+    "registrationSuccess": "Registration successful! Please sign in.",
+    "@registrationSuccess": {
+        "description": "Registration success message"
+    },
+    
+    "registrationFailed": "Registration failed. Please try again.",
+    "@registrationFailed": {
+        "description": "Registration failure message"
+    },
+    
+    "dontHaveAccount": "Don't have an account?",
+    "@dontHaveAccount": {
+        "description": "Create account link prefix text"
+    },
+    
+    "userManagement": "User Management",
+    "@userManagement": {
+        "description": "User management screen title"
+    },
+    
+    "addUser": "Add User",
+    "@addUser": {
+        "description": "Add user tab title"
+    },
+    
+    "usersList": "Users List",
+    "@usersList": {
+        "description": "Users list tab title"
+    },
+    
+    "addNewUser": "Add New User",
+    "@addNewUser": {
+        "description": "Add new user header title"
+    },
+    
+    "addUserToSystem": "Add a new user to the system",
+    "@addUserToSystem": {
+        "description": "Add user description"
+    },
+    
+    "systemUsers": "System Users",
+    "@systemUsers": {
+        "description": "System users list title"
+    },
+    
+    "refreshList": "Refresh List",
+    "@refreshList": {
+        "description": "Refresh list tooltip"
+    },
+    
+    "noUsersFound": "No users found",
+    "@noUsersFound": {
+        "description": "Empty users list message"
+    },
+    
+    "enterUserPassword": "Enter user password",
+    "@enterUserPassword": {
+        "description": "User password field hint"
+    },
+    
+    "addingUser": "Adding User...",
+    "@addingUser": {
+        "description": "Adding user loading text"
+    },
+    
+    "participantDetailsTitle": "Participant Details",
+    "@participantDetailsTitle": {
+        "description": "Participant details screen title"
+    },
+    
+    "addNewParticipant": "Add New Participant",
+    "@addNewParticipant": {
+        "description": "Add new participant screen title"
+    },
+    
+    "participantGeneralTab": "General Details",
+    "@participantGeneralTab": {
+        "description": "Participant general details tab"
+    },
+    
+    "participantValidityTab": "Participant Validity",
+    "@participantValidityTab": {
+        "description": "Participant validity tab"
+    },
+    
+    "participantBankAccountTab": "Bank Account",
+    "@participantBankAccountTab": {
+        "description": "Participant bank account tab"
+    },
+    
+    "participantNameLabel": "Participant Name",
+    "@participantNameLabel": {
+        "description": "Participant name field label"
+    },
+    
+    "participantNamePlaceholder": "System generated value",
+    "@participantNamePlaceholder": {
+        "description": "Participant name placeholder text"
+    },
+    
+    "participantNamePattern": "Must be of pattern : (^[A-W]([0-9][0-9][1-9]|[0-9][1-9][0-9]|[1-9][0-9][0-9])$)",
+    "@participantNamePattern": {
+        "description": "Participant name validation pattern message"
+    },
+    
+    "participantTypeLabel": "Participant Type",
+    "@participantTypeLabel": {
+        "description": "Participant type field label"
+    },
+    
+    "startDateLabel": "Start Date",
+    "@startDateLabel": {
+        "description": "Start date field label"
+    },
+    
+    "endDateLabel": "End Date",
+    "@endDateLabel": {
+        "description": "End date field label"
+    },
+    
+    "areaLabel": "Area",
+    "@areaLabel": {
+        "description": "Area field label"
+    },
+    
+    "companyShortNameLabel": "Company Short Name",
+    "@companyShortNameLabel": {
+        "description": "Company short name field label"
+    },
+    
+    "companyShortNamePlaceholder": "Must be of pattern: Japanese characters",
+    "@companyShortNamePlaceholder": {
+        "description": "Company short name placeholder"
+    },
+    
+    "companyShortNamePattern": "Must be of pattern: Japanese characters",
+    "@companyShortNamePattern": {
+        "description": "Company short name validation pattern"
+    },
+    
+    "companyLongNameLabel": "Company Long Name",
+    "@companyLongNameLabel": {
+        "description": "Company long name field label"
+    },
+    
+    "companyLongNamePlaceholder": "Must be of pattern: Japanese characters",
+    "@companyLongNamePlaceholder": {
+        "description": "Company long name placeholder"
+    },
+    
+    "companyLongNamePattern": "Must be of pattern: Japanese characters",
+    "@companyLongNamePattern": {
+        "description": "Company long name validation pattern"
+    },
+    
+    "phoneNumberLabel": "Phone Number",
+    "@phoneNumberLabel": {
+        "description": "Phone number field label"
+    },
+    
+    "phonePart1Label": "Phone Part1",
+    "@phonePart1Label": {
+        "description": "Phone part 1 field label"
+    },
+    
+    "phonePart1Placeholder": "XXXXX",
+    "@phonePart1Placeholder": {
+        "description": "Phone part 1 placeholder"
+    },
+    
+    "phonePart2Label": "Phone Part2",
+    "@phonePart2Label": {
+        "description": "Phone part 2 field label"
+    },
+    
+    "phonePart2Placeholder": "XXXX",
+    "@phonePart2Placeholder": {
+        "description": "Phone part 2 placeholder"
+    },
+    
+    "phonePart3Label": "Phone Part3",
+    "@phonePart3Label": {
+        "description": "Phone part 3 field label"
+    },
+    
+    "phonePart3Placeholder": "XXXX",
+    "@phonePart3Placeholder": {
+        "description": "Phone part 3 placeholder"
+    },
+    
+    "transactionIdLabel": "Transaction Id",
+    "@transactionIdLabel": {
+        "description": "Transaction ID field label"
+    },
+    
+    "transactionIdPlaceholder": "",
+    "@transactionIdPlaceholder": {
+        "description": "Transaction ID placeholder"
+    },
+    
+    "tradeDateLabel": "Trade Date",
+    "@tradeDateLabel": {
+        "description": "Trade date field label for query"
+    },
+    
+    "queryParticipantTitle": "Query Participant",
+    "@queryParticipantTitle": {
+        "description": "Query participant dialog title"
+    },
+    
+    "queryParticipantButton": "Query",
+    "@queryParticipantButton": {
+        "description": "Query button text"
+    },
+    
+    "resetButton": "Reset",
+    "@resetButton": {
+        "description": "Reset button text"
+    },
+    
+    "createParticipantButton": "Create Participant",
+    "@createParticipantButton": {
+        "description": "Create participant button text"
+    },
+    
+    "creatingParticipant": "Creating...",
+    "@creatingParticipant": {
+        "description": "Creating participant loading text"
+    },
+    
+    "saveButton": "Save",
+    "@saveButton": {
+        "description": "Save button text"
+    },
+    
+    "savingChanges": "Saving...",
+    "@savingChanges": {
+        "description": "Saving changes loading text"
+    },
+    
+    "messagesTitle": "Messages",
+    "@messagesTitle": {
+        "description": "Response messages card title"
+    },
+    
+    "addNewParticipantTooltip": "Add New User",
+    "@addNewParticipantTooltip": {
+        "description": "Add new participant tooltip"
+    },
+    
+    "addParticipantTooltip": "Add User",
+    "@addParticipantTooltip": {
+        "description": "Add participant tooltip"
+    },
+    
+    "participantCreatedSuccess": "Participant created successfully with name: {name}",
+    "@participantCreatedSuccess": {
+        "description": "Participant created success message",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "A001"
+            }
+        }
+    },
+    
+    "participantUpdatedSuccess": "Participant updated successfully",
+    "@participantUpdatedSuccess": {
+        "description": "Participant updated success message"
+    },
+    
+    "participantQuerySuccess": "Participant data loaded successfully",
+    "@participantQuerySuccess": {
+        "description": "Participant query success message"
+    },
+    
+    "fixFormErrors": "Please fix the errors in the form",
+    "@fixFormErrors": {
+        "description": "Form validation error message"
+    },
+    
+    "participantNameTrimmed": "Participant name trimmed to first 4 chars (max length = 4).",
+    "@participantNameTrimmed": {
+        "description": "Participant name trimmed warning"
+    },
+    
+    "failedToCreateParticipant": "Failed to add participant: {error}",
+    "@failedToCreateParticipant": {
+        "description": "Failed to create participant error message",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Network error"
+            }
+        }
+    },
+    
+    "failedToUpdateParticipant": "Failed to update participant: {error}",
+    "@failedToUpdateParticipant": {
+        "description": "Failed to update participant error message",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Network error"
+            }
+        }
+    },
+    
+    "failedToQueryParticipant": "Failed to query participant: {error}",
+    "@failedToQueryParticipant": {
+        "description": "Failed to query participant error message",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Network error"
+            }
+        }
+    }
+}
+

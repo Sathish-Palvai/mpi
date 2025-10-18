@@ -1,0 +1,12 @@
+{
+    "RegistrationData": {
+        "RegistrationQuery": {
+            "Participant": {
+                "@ParticipantName": "P001",
+                "@TradeDate": "2025-09-11"
+            }
+        },
+        "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "@xsi:noNamespaceSchemaLocation": "mpr.xsd"
+    }
+}

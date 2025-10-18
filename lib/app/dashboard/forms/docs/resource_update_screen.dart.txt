@@ -1,0 +1,4382 @@
+import 'package:flutter/material.dart' hide FormFieldBuilder;
+import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../../shared/widgets/app_drawer.dart';
+import '../../../../widgets/notification_icon.dart';
+import '../../../../core/forms/forms.dart';
+import '../../../../services/api_service.dart';
+import '../../bloc/dashboard_bloc.dart';
+import '../../bloc/dashboard_event.dart';
+import '../../bloc/dashboard_state.dart';
+import '../resource/schemas/resource_update_schema.dart';
+import '../resource/resource_query_component.dart';
+import '../resource/control_params_helper.dart';
+import '../../../../features/auth/bloc/auth_bloc.dart';
+import '../../../../features/auth/bloc/auth_state.dart';
+import '../../../../core/user_type.dart';
+
+/// Resource update screen using config-driven form library
+/// 
+/// This screen demonstrates how to build forms using the config-driven approach.
+/// All form fields, validation rules, and layouts are defined declaratively
+/// in ResourceUpdateSchema, and the form library handles the rest.
+class ResourceUpdateScreen extends StatefulWidget {
+  final Map<String, dynamic> resource;
+
+  const ResourceUpdateScreen({
+    super.key,
+    required this.resource,
+  });
+
+  @override
+  State<ResourceUpdateScreen> createState() =>
+      _ResourceUpdateScreenState();
+}
+
+class _ResourceUpdateScreenState
+    extends State<ResourceUpdateScreen> {
+  final _resourceFormKey = GlobalKey<FormState>();
+  final _technicalSpecsFormKey = GlobalKey<FormState>();
+  late Map<String, TextEditingController> _controllers;
+  late List<FormSectionConfig> _allSections;
+  late List<FormSectionConfig> _resourceSections;
+  late PageController _pageController;
+  late ScrollController _stepScrollController;
+  
+  // Stepper control
+  int _currentStep = 0;
+  int _selectedStartupPatternIndex = 0;
+  int _selectedStopPatternIndex = 0;
+
+  bool _isSubmitting = false;
+  bool _isLoading = true;
+  Map<String, dynamic>? _submissionResponse;
+  bool _showResponse = false;
+  
+  // Query functionality
+  List<String> _participantList = [];
+  List<String> _resourceList = [];
+  String? _selectedParticipant;
+  String? _selectedResource;
+  bool _isInitialized = false;
+
+  // Resource Type Constants
+  static const String THERMAL = '01';
+  static const String HYDRO = '02';
+  static const String PUMP = '03';
+  static const String BATTERY = '04';
+  static const String VPP_GEN = '05';
+  static const String VPP_GEN_AND_DEM = '06';
+  static const String VPP_DEM = '07';
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize PageController
+    _pageController = PageController(initialPage: 0);
+    // Initialize ScrollController for step indicator
+    _stepScrollController = ScrollController();
+    // Load control parameters
+    ControlParamsHelper.loadControlParams();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    debugPrint('🔄 didChangeDependencies called - _isInitialized: $_isInitialized');
+    
+    if (!_isInitialized) {
+      debugPrint('🚀 Initializing sections...');
+      _isInitialized = true;
+      _allSections = ResourceUpdateSchema.getAllSections(context);
+      
+      // Separate sections for different tabs
+      _resourceSections = [
+        ...ResourceUpdateSchema.getKeyControlSections(context),
+        ...ResourceUpdateSchema.getUpsertSections(context),
+        ...ResourceUpdateSchema.getPrimaryControlSections(context),
+        ...ResourceUpdateSchema.getSecondary1ControlSections(context),
+        ...ResourceUpdateSchema.getSecondary2ControlSections(context),
+        ...ResourceUpdateSchema.getTertiary1ControlSections(context),
+        ...ResourceUpdateSchema.getTertiary2ControlSections(context),
+        ...ResourceUpdateSchema.getRemainingControlSections(context),
+        ...ResourceUpdateSchema.getAddressControlSections(context),
+        ...ResourceUpdateSchema.getTechnicalSpecSections(context), // Add technical specs here
+        ...ResourceUpdateSchema.getStatusSections(context),
+      ];
+      
+      debugPrint('📊 Resource Sections Count: ${_resourceSections.length}');
+      
+      _controllers = FormControllerHelper.initializeControllers(
+        _allSections,
+        widget.resource,
+      );
+      
+      // Apply initial dynamic visibility based on ResourceType
+      _applyDynamicFieldVisibility();
+      
+      // Load all participants and resources for the dropdown
+      _loadLists();
+      
+      // Perform initial backend query to load resource data immediately
+      _performInitialQuery();
+    } else {
+      debugPrint('⏭️ Skipping initialization - already initialized');
+    }
+  }
+  
+  /// Apply dynamic field visibility and requirement based on ResourceType and ContractType
+  void _applyDynamicFieldVisibility() {
+    final resourceTypeValue = _controllers['ResourceType']?.text ?? '01';
+    final contractTypeValue = _controllers['ContractType']?.text;
+    debugPrint('🔧 Applying dynamic visibility for ResourceType: $resourceTypeValue, ContractType: $contractTypeValue');
+    
+    // Get hidden fields for this resource type
+    final hiddenFields = ControlParamsHelper.getHiddenFields(
+      resourceTypeValue,
+      contractTypeValue: contractTypeValue,
+    );
+    
+    debugPrint('🔧 Hidden fields count: ${hiddenFields.length}');
+    
+    // Clear values for hidden fields
+    for (final fieldId in hiddenFields) {
+      if (_controllers.containsKey(fieldId)) {
+        _controllers[fieldId]?.clear();
+        debugPrint('  ✂️ Cleared hidden field: $fieldId');
+      }
+    }
+    
+    // Update field configurations
+    for (final section in _resourceSections) {
+      for (var i = 0; i < section.fields.length; i++) {
+        final field = section.fields[i];
+        final fieldId = field.id;
+        
+        // Skip fields that don't exist in controlParams (like TransactionId, Comments)
+        if (!hiddenFields.contains(fieldId) && 
+            ControlParamsHelper.getFieldConfig(resourceTypeValue, fieldId, contractTypeValue: contractTypeValue) != 1 &&
+            ControlParamsHelper.getFieldConfig(resourceTypeValue, fieldId, contractTypeValue: contractTypeValue) != 0 &&
+            ControlParamsHelper.getFieldConfig(resourceTypeValue, fieldId, contractTypeValue: contractTypeValue) != -1) {
+          continue;
+        }
+        
+        final isVisible = ControlParamsHelper.isFieldVisible(
+          resourceTypeValue, 
+          fieldId,
+          contractTypeValue: contractTypeValue,
+        );
+        final isRequired = ControlParamsHelper.isFieldRequired(
+          resourceTypeValue, 
+          fieldId,
+          contractTypeValue: contractTypeValue,
+        );
+        
+        // Update field configuration
+        section.fields[i] = field.copyWith(
+          visible: isVisible,
+          required: isRequired,
+        );
+        
+        if (!isVisible) {
+          debugPrint('  👁️ Hidden: $fieldId');
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _stepScrollController.dispose();
+    FormControllerHelper.disposeControllers(_controllers);
+    super.dispose();
+  }
+
+  /// Perform initial query to load resource data from backend
+  Future<void> _performInitialQuery() async {
+    try {
+      final queryData = _buildQueryStructure(
+        widget.resource['ParticipantName'] ?? widget.resource['@ParticipantName'] ?? '',
+        widget.resource['ResourceName'] ?? widget.resource['@ResourceName'] ?? '',
+        _getCurrentDate(),
+        '',
+      );
+      
+      // Use real backend API call
+      final response = await ApiService.queryResource(queryData);
+
+      if (mounted) {
+        // Update form fields with the query response
+        final registrationData = response['RegistrationData'];
+        final registrationQuery = registrationData?['RegistrationQuery'];
+        final resource = registrationQuery?['Resource'];
+        
+        if (resource != null) {
+          debugPrint('✅ Initial query - resource data found, updating fields');
+          _updateFieldsFromResponse(resource);
+        } else {
+          debugPrint('❌ Initial query - no resource data found');
+        }
+
+        // Set everything together in one setState
+        setState(() {
+          _submissionResponse = response;
+          _showResponse = true;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Initial query error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Build query structure for resource lookup
+  Map<String, dynamic> _buildQueryStructure(
+    String participantName,
+    String resourceName,
+    String date,
+    String recordStatus,
+  ) {
+    final resource = <String, dynamic>{
+      "@ParticipantName": participantName,
+      "@ResourceName": resourceName,
+    };
+    
+    if (date.isNotEmpty) {
+      resource["@Date"] = date;
+    }
+    
+    if (recordStatus.isNotEmpty) {
+      resource["@RecordStatus"] = recordStatus;
+    }
+    
+    return {
+      "RegistrationData": {
+        "RegistrationQuery": {
+          "Resource": resource,
+        },
+        "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "@xsi:noNamespaceSchemaLocation": "mpr.xsd"
+      }
+    };
+  }
+
+  /// Get current date in yyyy-MM-dd format
+  String _getCurrentDate() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Determine if a step should be shown based on ResourceType
+  bool _shouldShowStep(String stepName) {
+    final resourceTypeValue = _controllers['ResourceType']?.text;
+    if (resourceTypeValue == null || resourceTypeValue.isEmpty) return false;
+
+    switch (stepName) {
+      case 'OutputBand':
+      case 'SwitchOutput':
+      case 'AFC':
+      case 'StartupPattern':
+      case 'StopPattern':
+        return resourceTypeValue == THERMAL ||
+            resourceTypeValue == HYDRO ||
+            resourceTypeValue == PUMP;
+      default:
+        return true;
+    }
+  }
+
+  /// Get step titles for the current resource type
+  List<String> _getStepTitles() {
+    final titles = <String>['General Details'];
+    
+    if (_shouldShowStep('OutputBand')) titles.add('Output Band');
+    if (_shouldShowStep('SwitchOutput')) titles.add('Switch Output');
+    if (_shouldShowStep('AFC')) titles.add('AFC');
+    if (_shouldShowStep('StartupPattern')) titles.add('Startup Pattern');
+    if (_shouldShowStep('StopPattern')) titles.add('Stop Pattern');
+    
+    return titles;
+  }
+
+  /// Build step contents for PageView
+  List<Widget> _buildStepContents() {
+    final contents = <Widget>[_buildResourceTab()];
+    
+    if (_shouldShowStep('OutputBand')) contents.add(_buildPlaceholderTab('Output Band'));
+    if (_shouldShowStep('SwitchOutput')) contents.add(_buildPlaceholderTab('Switch Output'));
+    if (_shouldShowStep('AFC')) contents.add(_buildPlaceholderTab('AFC'));
+    if (_shouldShowStep('StartupPattern')) contents.add(_buildPlaceholderTab('Startup Pattern'));
+    if (_shouldShowStep('StopPattern')) contents.add(_buildPlaceholderTab('Stop Pattern'));
+    
+    return contents;
+  }
+
+  /// Build horizontal step indicator with scrollable tabs
+  Widget _buildStepIndicator() {
+    final theme = Theme.of(context);
+    final titles = _getStepTitles();
+    
+    // Auto-scroll to show active step with adjacent steps partially visible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_stepScrollController.hasClients && titles.length > 1) {
+        // Calculate the approximate position to center the active step
+        // while showing parts of adjacent steps
+        final itemWidth = 180.0; // Approximate width of each step button
+        final screenWidth = MediaQuery.of(context).size.width;
+        final targetOffset = (_currentStep * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
+        
+        // Ensure we don't scroll beyond bounds
+        final maxScroll = _stepScrollController.position.maxScrollExtent;
+        final clampedOffset = targetOffset.clamp(0.0, maxScroll);
+        
+        _stepScrollController.animateTo(
+          clampedOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+    
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          ListView.builder(
+            controller: _stepScrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            itemCount: titles.length,
+            itemBuilder: (context, index) {
+              final isActive = index == _currentStep;
+              final isCompleted = index < _currentStep;
+              
+              return GestureDetector(
+                onTap: () {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? theme.colorScheme.primary
+                        : isCompleted
+                            ? theme.colorScheme.primaryContainer
+                            : theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isActive || isCompleted
+                          ? theme.colorScheme.primary
+                          : theme.dividerColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isActive
+                              ? Colors.white
+                              : isCompleted
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.surfaceContainerHighest,
+                          border: Border.all(
+                            color: isActive || isCompleted
+                                ? theme.colorScheme.primary
+                                : theme.dividerColor,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: isCompleted
+                              ? Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: Colors.white,
+                                )
+                              : Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isActive
+                                        ? theme.colorScheme.primary
+                                        : theme.textTheme.bodyMedium?.color,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        titles[index],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                          color: isActive
+                              ? Colors.white
+                              : isCompleted
+                                  ? theme.colorScheme.primary
+                                  : theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          // Gradient indicators on left and right to show more content
+          if (titles.length > 2) ...[
+            // Left gradient
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Container(
+                  width: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        theme.cardColor,
+                        theme.cardColor.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Right gradient
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Container(
+                  width: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                      colors: [
+                        theme.cardColor,
+                        theme.cardColor.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Build navigation buttons at the bottom
+  Widget _buildNavigationButtons() {
+    final theme = Theme.of(context);
+    final titles = _getStepTitles();
+    final isFirstStep = _currentStep == 0;
+    final isLastStep = _currentStep == titles.length - 1;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Previous button
+          if (!isFirstStep)
+            OutlinedButton.icon(
+              onPressed: () {
+                _pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Previous'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+            )
+          else
+            const SizedBox.shrink(),
+          
+          // Step indicator text
+          Text(
+            'Step ${_currentStep + 1} of ${titles.length}',
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.textTheme.bodyMedium?.color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          
+          // Next button
+          if (!isLastStep)
+            ElevatedButton.icon(
+              onPressed: () {
+                _pageController.nextPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              label: const Text('Next'),
+              icon: const Icon(Icons.arrow_forward),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+            )
+          else
+            const SizedBox.shrink(),
+        ],
+      ),
+    );
+  }
+
+  /// Placeholder tab content (will be replaced with actual implementations)
+  Widget _buildPlaceholderTab(String tabName) {
+    switch (tabName) {
+      case 'Output Band':
+        return _buildOutputBandTab();
+      case 'Switch Output':
+        return _buildSwitchOutputTab();
+      case 'AFC':
+        return _buildAfcTab();
+      case 'Startup Pattern':
+        return _buildStartupPatternTab();
+      case 'Stop Pattern':
+        return _buildStopPatternTab();
+      default:
+        return Center(
+          child: Text(
+            '$tabName - Coming Soon',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          ),
+        );
+    }
+  }
+
+  Widget _buildOutputBandTab() {
+    // Parse OutputBand data from resource
+    final outputBandData = widget.resource['OutputBand'];
+    final List<dynamic> outputBandInfo =
+        outputBandData != null && outputBandData is Map
+            ? (outputBandData['OutputBandInfo'] as List? ?? [])
+            : [];
+
+    const int maxRows = 20;
+    final bool canAddMore = outputBandInfo.length < maxRows;
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (outputBandInfo.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No output band data available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _showOutputBandDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add First Output Band'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Use card view on small screens, table on large screens
+                    final bool useCardView = constraints.maxWidth < 768;
+
+                    return Column(
+                      children: [
+                        if (useCardView)
+                          _buildCardView(outputBandInfo)
+                        else
+                          _buildTableView(outputBandInfo),
+                        const SizedBox(height: 80), // Space for FAB
+                      ],
+                    );
+                  },
+                ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Records: ${outputBandInfo.length} of $maxRows',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (!canAddMore)
+                    Chip(
+                      label: const Text('Max limit reached'),
+                      backgroundColor: Colors.orange[100],
+                      avatar: const Icon(Icons.warning, size: 18),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        // Floating Action Button
+        if (canAddMore && outputBandInfo.isNotEmpty)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FloatingActionButton(
+              onPressed: () => _showOutputBandDialog(context),
+              tooltip: 'Add Output Band',
+              child: const Icon(Icons.add),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSwitchOutputTab() {
+    // Parse SwitchOutput data from resource
+    final switchOutputData = widget.resource['SwitchOutput'];
+
+    // Handle both single object and array formats
+    List<dynamic> switchOutputInfo = [];
+    if (switchOutputData != null && switchOutputData is Map) {
+      final info = switchOutputData['SwitchOutputInfo'];
+      if (info is List) {
+        switchOutputInfo = info;
+      } else if (info is Map) {
+        switchOutputInfo = [info];
+      }
+    }
+
+    const int maxRows = 20;
+    final bool canAddMore = switchOutputInfo.length < maxRows;
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (switchOutputInfo.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No switch output data available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _showSwitchOutputDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add First Switch Output'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool useCardView = constraints.maxWidth < 768;
+
+                    return Column(
+                      children: [
+                        if (useCardView)
+                          _buildSwitchOutputCardView(switchOutputInfo)
+                        else
+                          _buildSwitchOutputTableView(switchOutputInfo),
+                        const SizedBox(height: 80),
+                      ],
+                    );
+                  },
+                ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Records: ${switchOutputInfo.length} of $maxRows',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (!canAddMore)
+                    Chip(
+                      label: const Text('Max limit reached'),
+                      backgroundColor: Colors.orange[100],
+                      avatar: const Icon(Icons.warning, size: 18),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (canAddMore && switchOutputInfo.isNotEmpty)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FloatingActionButton(
+              onPressed: () => _showSwitchOutputDialog(context),
+              tooltip: 'Add Switch Output',
+              child: const Icon(Icons.add),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAfcTab() {
+    // Parse OutputRangeBelowAfc data from resource
+    final afcData = widget.resource['OutputRangeBelowAfc'];
+
+    // Handle both single object and array formats
+    List<dynamic> afcInfo = [];
+    if (afcData != null && afcData is Map) {
+      final info = afcData['OutputRangeBelowAfcInfo'];
+      if (info is List) {
+        afcInfo = info;
+      } else if (info is Map) {
+        afcInfo = [info];
+      }
+    }
+
+    const int maxRows = 20;
+    final bool canAddMore = afcInfo.length < maxRows;
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (afcInfo.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No AFC data available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _showAfcDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add First AFC Record'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool useCardView = constraints.maxWidth < 768;
+
+                    return Column(
+                      children: [
+                        if (useCardView)
+                          _buildAfcCardView(afcInfo)
+                        else
+                          _buildAfcTableView(afcInfo),
+                        const SizedBox(height: 80),
+                      ],
+                    );
+                  },
+                ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Records: ${afcInfo.length} of $maxRows',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (!canAddMore)
+                    Chip(
+                      label: const Text('Max limit reached'),
+                      backgroundColor: Colors.orange[100],
+                      avatar: const Icon(Icons.warning, size: 18),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (canAddMore && afcInfo.isNotEmpty)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FloatingActionButton(
+              onPressed: () => _showAfcDialog(context),
+              tooltip: 'Add AFC Record',
+              child: const Icon(Icons.add),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStartupPatternTab() {
+    // Parse StartupPattern data from resource
+    final startupPatternData = widget.resource['StartupPattern'];
+
+    // Handle both single object and array formats
+    List<dynamic> patterns = [];
+    if (startupPatternData != null && startupPatternData is Map) {
+      final info = startupPatternData['StartupPatternInfo'];
+      if (info is List) {
+        patterns = info;
+      } else if (info is Map) {
+        patterns = [info];
+      }
+    }
+
+    // Ensure selected index is valid
+    if (_selectedStartupPatternIndex >= patterns.length) {
+      _selectedStartupPatternIndex = patterns.isNotEmpty ? 0 : 0;
+    }
+
+    // Get selected pattern data
+    final selectedPattern =
+        patterns.isNotEmpty && _selectedStartupPatternIndex < patterns.length
+            ? patterns[_selectedStartupPatternIndex]
+            : null;
+
+    final String patternName =
+        selectedPattern?['PatternName']?.toString() ?? '-';
+    final List<dynamic> events =
+        selectedPattern?['StartupPatternEvent'] as List? ?? [];
+
+    const int maxPatterns = 10;
+    const int maxEvents = 20;
+    final bool canAddMorePatterns = patterns.length < maxPatterns;
+    final bool canAddMoreEvents = events.length < maxEvents;
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (patterns.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No startup patterns available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _showStartupPatternDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add First Pattern'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Pattern selection chips with edit/delete
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: patterns.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final pattern = entry.value;
+                              final name = pattern['PatternName']?.toString() ??
+                                  'Pattern ${index + 1}';
+                              final isSelected =
+                                  index == _selectedStartupPatternIndex;
+
+                              return FilterChip(
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(name),
+                                    if (isSelected) ...[
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () => _showStartupPatternDialog(
+                                            context,
+                                            existingData: pattern,
+                                            index: index),
+                                        child: const Icon(Icons.edit, size: 16),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap: () =>
+                                            _confirmDeleteStartupPattern(
+                                                context, index),
+                                        child:
+                                            const Icon(Icons.close, size: 16),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() {
+                                      _selectedStartupPatternIndex = index;
+                                    });
+                                  }
+                                },
+                                selectedColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                checkmarkColor:
+                                    Theme.of(context).colorScheme.primary,
+                                labelStyle: TextStyle(
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Pattern ${_selectedStartupPatternIndex + 1} of ${patterns.length} (max $maxPatterns)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        if (!canAddMorePatterns)
+                          Chip(
+                            label: const Text('Max patterns reached'),
+                            backgroundColor: Colors.orange[100],
+                            avatar: const Icon(Icons.warning, size: 16),
+                            labelPadding:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Selected pattern details card
+                    Card(
+                      elevation: 1,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withOpacity(0.3),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.label, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Pattern Name: ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                patternName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Events section
+                    Text(
+                      'Events',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (events.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.event_note,
+                                size: 40,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No events in this pattern',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: () =>
+                                    _showStartupEventDialog(context),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add First Event'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final bool useCardView = constraints.maxWidth < 768;
+
+                          return Column(
+                            children: [
+                              if (useCardView)
+                                _buildStartupEventsCardView(events)
+                              else
+                                _buildStartupEventsTableView(events),
+                              const SizedBox(height: 80),
+                            ],
+                          );
+                        },
+                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Events: ${events.length} of $maxEvents',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (!canAddMoreEvents)
+                          Chip(
+                            label: const Text('Max events reached'),
+                            backgroundColor: Colors.orange[100],
+                            avatar: const Icon(Icons.warning, size: 18),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        // FABs for adding patterns and events
+        if (patterns.isNotEmpty && canAddMoreEvents && events.isNotEmpty)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FloatingActionButton(
+              onPressed: () => _showStartupEventDialog(context),
+              tooltip: 'Add Event',
+              child: const Icon(Icons.add),
+            ),
+          ),
+        if (canAddMorePatterns && patterns.isNotEmpty)
+          Positioned(
+            right: 90,
+            bottom: 20,
+            child: FloatingActionButton.extended(
+              onPressed: () => _showStartupPatternDialog(context),
+              tooltip: 'Add Pattern',
+              icon: const Icon(Icons.playlist_add),
+              label: const Text('Pattern'),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStopPatternTab() {
+    // Parse StopPattern data from resource
+    final stopPatternData = widget.resource['StopPattern'];
+
+    // Handle both single object and array formats
+    List<dynamic> patterns = [];
+    if (stopPatternData != null && stopPatternData is Map) {
+      final info = stopPatternData['StopPatternInfo'];
+      if (info is List) {
+        patterns = info;
+      } else if (info is Map) {
+        patterns = [info];
+      }
+    }
+
+    // Ensure selected index is valid
+    if (_selectedStopPatternIndex >= patterns.length) {
+      _selectedStopPatternIndex = patterns.isNotEmpty ? 0 : 0;
+    }
+
+    // Get selected pattern data
+    final selectedPattern =
+        patterns.isNotEmpty && _selectedStopPatternIndex < patterns.length
+            ? patterns[_selectedStopPatternIndex]
+            : null;
+
+    final String patternName =
+        selectedPattern?['PatternName']?.toString() ?? '-';
+    final List<dynamic> events =
+        selectedPattern?['StopPatternEvent'] as List? ?? [];
+
+    const int maxPatterns = 10;
+    const int maxEvents = 20;
+    final bool canAddMorePatterns = patterns.length < maxPatterns;
+    final bool canAddMoreEvents = events.length < maxEvents;
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (patterns.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No stop patterns available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _showStopPatternDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add First Pattern'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Pattern selection chips with edit/delete
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: patterns.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final pattern = entry.value;
+                              final name = pattern['PatternName']?.toString() ??
+                                  'Pattern ${index + 1}';
+                              final isSelected =
+                                  index == _selectedStopPatternIndex;
+
+                              return FilterChip(
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(name),
+                                    if (isSelected) ...[
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () => _showStopPatternDialog(
+                                            context,
+                                            existingData: pattern,
+                                            index: index),
+                                        child: const Icon(Icons.edit, size: 16),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap: () => _confirmDeleteStopPattern(
+                                            context, index),
+                                        child:
+                                            const Icon(Icons.close, size: 16),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() {
+                                      _selectedStopPatternIndex = index;
+                                    });
+                                  }
+                                },
+                                selectedColor: Theme.of(context)
+                                    .colorScheme
+                                    .errorContainer,
+                                checkmarkColor:
+                                    Theme.of(context).colorScheme.error,
+                                labelStyle: TextStyle(
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Pattern ${_selectedStopPatternIndex + 1} of ${patterns.length} (max $maxPatterns)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        if (!canAddMorePatterns)
+                          Chip(
+                            label: const Text('Max patterns reached'),
+                            backgroundColor: Colors.orange[100],
+                            avatar: const Icon(Icons.warning, size: 16),
+                            labelPadding:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Selected pattern details card
+                    Card(
+                      elevation: 1,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .errorContainer
+                          .withOpacity(0.3),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.label, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Pattern Name: ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                patternName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Events section
+                    Text(
+                      'Events',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (events.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.event_note,
+                                size: 40,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No events in this pattern',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: () => _showStopEventDialog(context),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add First Event'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final bool useCardView = constraints.maxWidth < 768;
+
+                          return Column(
+                            children: [
+                              if (useCardView)
+                                _buildStopEventsCardView(events)
+                              else
+                                _buildStopEventsTableView(events),
+                              const SizedBox(height: 80),
+                            ],
+                          );
+                        },
+                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Events: ${events.length} of $maxEvents',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (!canAddMoreEvents)
+                          Chip(
+                            label: const Text('Max events reached'),
+                            backgroundColor: Colors.orange[100],
+                            avatar: const Icon(Icons.warning, size: 18),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        // FABs for adding patterns and events
+        if (patterns.isNotEmpty && canAddMoreEvents && events.isNotEmpty)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FloatingActionButton(
+              onPressed: () => _showStopEventDialog(context),
+              tooltip: 'Add Event',
+              child: const Icon(Icons.add),
+            ),
+          ),
+        if (canAddMorePatterns && patterns.isNotEmpty)
+          Positioned(
+            right: 90,
+            bottom: 20,
+            child: FloatingActionButton.extended(
+              onPressed: () => _showStopPatternDialog(context),
+              tooltip: 'Add Pattern',
+              icon: const Icon(Icons.playlist_add),
+              label: const Text('Pattern'),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Update form fields from backend response
+  void _updateFieldsFromResponse(Map<String, dynamic> resource) {
+    debugPrint('=== UPDATING FORM FIELDS ===');
+    debugPrint('Resource data: $resource');
+    
+    // Helper function to get field value (with or without @ prefix)
+    dynamic getFieldValue(String fieldName) {
+      return resource[fieldName] ?? resource['@$fieldName'];
+    }
+    
+    // Debug: Check Additional Controls fields specifically
+    debugPrint('\n🔍 ADDITIONAL CONTROLS FIELD DEBUG:');
+    debugPrint('  PriSec1CommandOperationMethod: ${getFieldValue('PriSec1CommandOperationMethod')}');
+    debugPrint('  Sec2Ter1Ter2CommandOperationMethod: ${getFieldValue('Sec2Ter1Ter2CommandOperationMethod')}');
+    debugPrint('  SignalType: ${getFieldValue('SignalType')}');
+    debugPrint('  ContractExistence: ${getFieldValue('ContractExistence')}');
+    debugPrint('  DeclaredMaximumUnitPrice: ${getFieldValue('DeclaredMaximumUnitPrice')}');
+    debugPrint('  VoltageAdjustment: ${getFieldValue('VoltageAdjustment')}');
+    
+    // Update text controllers with backend data
+    // Map all resource fields from response
+    final fieldsToUpdate = <String, dynamic>{
+      // Key fields
+      'ParticipantName': getFieldValue('ParticipantName'),
+      'ResourceName': getFieldValue('ResourceName'),
+      'Area': getFieldValue('Area'),
+      'ContractType': getFieldValue('ContractType'),
+      'ResourceType': getFieldValue('ResourceType'),
+      
+      // Basic info
+      'StartDate': getFieldValue('StartDate'),
+      'EndDate': getFieldValue('EndDate'),
+      'SystemCode': getFieldValue('SystemCode'),
+      'ResourceShortName': getFieldValue('ResourceShortName'),
+      'ResourceLongName': getFieldValue('ResourceLongName'),
+      'BgCode': getFieldValue('BgCode'),
+      
+      // Primary control
+      'Pri': getFieldValue('Pri'),
+      'PriResponseTime': getFieldValue('PriResponseTime'),
+      'PriContinuousTime': getFieldValue('PriContinuousTime'),
+      'PriMaximumSupplyQuantity': getFieldValue('PriMaximumSupplyQuantity'),
+      'PriRemResvUtilization': getFieldValue('PriRemResvUtilization'),
+      'PriRemResvMaximumSupplyQuantity': getFieldValue('PriRemResvMaximumSupplyQuantity'),
+      
+      // Secondary 1 control
+      'Sec1': getFieldValue('Sec1'),
+      'Sec1ResponseTime': getFieldValue('Sec1ResponseTime'),
+      'Sec1ContinuousTime': getFieldValue('Sec1ContinuousTime'),
+      'Sec1MaximumSupplyQuantity': getFieldValue('Sec1MaximumSupplyQuantity'),
+      'Sec1RemResvUtilization': getFieldValue('Sec1RemResvUtilization'),
+      'Sec1RemResvMaximumSupplyQuantity': getFieldValue('Sec1RemResvMaximumSupplyQuantity'),
+      
+      // Secondary 2 control
+      'Sec2': getFieldValue('Sec2'),
+      'Sec2ResponseTime': getFieldValue('Sec2ResponseTime'),
+      'Sec2ContinuousTime': getFieldValue('Sec2ContinuousTime'),
+      'Sec2DownTime': getFieldValue('Sec2DownTime'),
+      'Sec2MaximumSupplyQuantity': getFieldValue('Sec2MaximumSupplyQuantity'),
+      'Sec2RemResvUtilization': getFieldValue('Sec2RemResvUtilization'),
+      'Sec2RemResvMaximumSupplyQuantity': getFieldValue('Sec2RemResvMaximumSupplyQuantity'),
+      
+      // Tertiary 1 control
+      'Ter1': getFieldValue('Ter1'),
+      'Ter1ResponseTime': getFieldValue('Ter1ResponseTime'),
+      'Ter1ContinuousTime': getFieldValue('Ter1ContinuousTime'),
+      'Ter1MaximumSupplyQuantity': getFieldValue('Ter1MaximumSupplyQuantity'),
+      'Ter1RemResvUtilization': getFieldValue('Ter1RemResvUtilization'),
+      'Ter1RemResvMaximumSupplyQuantity': getFieldValue('Ter1RemResvMaximumSupplyQuantity'),
+      
+      // Tertiary 2 control
+      'Ter2': getFieldValue('Ter2'),
+      'Ter2ResponseTime': getFieldValue('Ter2ResponseTime'),
+      'Ter2ContinuousTime': getFieldValue('Ter2ContinuousTime'),
+      'Ter2MaximumSupplyQuantity': getFieldValue('Ter2MaximumSupplyQuantity'),
+      'Ter2RemResvUtilization': getFieldValue('Ter2RemResvUtilization'),
+      'Ter2RemResvMaximumSupplyQuantity': getFieldValue('Ter2RemResvMaximumSupplyQuantity'),
+      
+      // Address
+      'Address': getFieldValue('Address'),
+      'PayeePhonePart1': getFieldValue('PayeePhonePart1'),
+      'PayeePhonePart2': getFieldValue('PayeePhonePart2'),
+      'PayeePhonePart3': getFieldValue('PayeePhonePart3'),
+      
+      // Technical specs - Basic
+      'BaselineSettingMethod': getFieldValue('BaselineSettingMethod'),
+      'VenId': getFieldValue('VenId'),
+      'ModelName': getFieldValue('ModelName'),
+      'RatedCapacity': getFieldValue('RatedCapacity'),
+      'RatedVoltage': getFieldValue('RatedVoltage'),
+      'ContinuousOperationVoltage': getFieldValue('ContinuousOperationVoltage'),
+      'RatedPowerFactor': getFieldValue('RatedPowerFactor'),
+      'Frequency': getFieldValue('Frequency'),
+      'InPlantRate': getFieldValue('InPlantRate'),
+      
+      // Technical specs - Frequency and Operations
+      'ContinuousOperationFrequencyLower': getFieldValue('ContinuousOperationFrequencyLower'),
+      'ContinuousOperationFrequencyUpper': getFieldValue('ContinuousOperationFrequencyUpper'),
+      'BlackStart': getFieldValue('BlackStart'),
+      'RatedOutput': getFieldValue('RatedOutput'),
+      'MinimumOutput': getFieldValue('MinimumOutput'),
+      'AuthorizedMaximumOutput': getFieldValue('AuthorizedMaximumOutput'),
+      'ThermalType': getFieldValue('ThermalType'),
+      
+      // Technical specs - Battery and Hydro
+      'BatteryCapacity': getFieldValue('BatteryCapacity'),
+      'PumpCharging': getFieldValue('PumpCharging'),
+      'VariableSpeedOperation': getFieldValue('VariableSpeedOperation'),
+      'DischargingOutput': getFieldValue('DischargingOutput'),
+      'DischargingTime': getFieldValue('DischargingTime'),
+      'ChargingOutput': getFieldValue('ChargingOutput'),
+      'ChargingTime': getFieldValue('ChargingTime'),
+      
+      // Technical specs - Time Operations
+      'FullPowerGenerationTime': getFieldValue('FullPowerGenerationTime'),
+      'ContinuousOperationTime': getFieldValue('ContinuousOperationTime'),
+      'ContinuousOperationTimeLimited': getFieldValue('ContinuousOperationTimeLimited'),
+      'PhaseModifyingOperation': getFieldValue('PhaseModifyingOperation'),
+      
+      // Technical specs - Water and Reservoir
+      'AmountOfWaterUsed': getFieldValue('AmountOfWaterUsed'),
+      'ReservoirCapacity': getFieldValue('ReservoirCapacity'),
+      'InflowAmount': getFieldValue('InflowAmount'),
+      'ContinuousOperationOutput': getFieldValue('ContinuousOperationOutput'),
+      'PumpedSupply': getFieldValue('PumpedSupply'),
+      
+      // Technical specs - Advanced Operations
+      'FcbOperation': getFieldValue('FcbOperation'),
+      'OverPowerOperation': getFieldValue('OverPowerOperation'),
+      'PeakModeOperation': getFieldValue('PeakModeOperation'),
+      'Dss': getFieldValue('Dss'),
+      'OverPowerOperationMaximumOutput': getFieldValue('OverPowerOperationMaximumOutput'),
+      'PeakModeOperationMaximumOutput': getFieldValue('PeakModeOperationMaximumOutput'),
+      'OperationTime': getFieldValue('OperationTime'),
+      'NumberOfStartups': getFieldValue('NumberOfStartups'),
+      
+      // Technical specs - AFC and Frequency Control
+      'AfcMinimumOutput': getFieldValue('AfcMinimumOutput'),
+      'GfVariationRate': getFieldValue('GfVariationRate'),
+      'DeadBand': getFieldValue('DeadBand'),
+      'FrequencyMeasurementInterval': getFieldValue('FrequencyMeasurementInterval'),
+      'FrequencyMeasurementError': getFieldValue('FrequencyMeasurementError'),
+      'DelayTime': getFieldValue('DelayTime'),
+      'GfWidthOutOfRatedOutput': getFieldValue('GfWidthOutOfRatedOutput'),
+      
+      // Additional Controls (Command Operation Methods)
+      'PriSec1CommandOperationMethod': getFieldValue('PriSec1CommandOperationMethod'),
+      'Sec2Ter1Ter2CommandOperationMethod': getFieldValue('Sec2Ter1Ter2CommandOperationMethod'),
+      'SignalType': getFieldValue('SignalType'),
+      'ContractExistence': getFieldValue('ContractExistence'),
+      'DeclaredMaximumUnitPrice': getFieldValue('DeclaredMaximumUnitPrice'),
+      'VoltageAdjustment': getFieldValue('VoltageAdjustment'),
+      
+      // Technical specs - Market Context
+      'MarketContext': getFieldValue('MarketContext'),
+      
+      // Status
+      'RecordStatus': getFieldValue('RecordStatus'),
+      'TransactionId': getFieldValue('TransactionId'),
+      'Comments': resource['Comments']?['#text'],
+    };
+
+    fieldsToUpdate.forEach((fieldId, value) {
+      if (value != null && _controllers.containsKey(fieldId)) {
+        _controllers[fieldId]!.text = value.toString();
+        
+        // Log dropdown/select fields specifically to help debug
+        final allFieldConfigs = _allSections.expand((s) => s.fields).toList();
+        final fieldConfig = allFieldConfigs.firstWhere(
+          (f) => f.id == fieldId,
+          orElse: () => FormFieldConfig(id: '', label: ''),
+        );
+        
+        if (fieldConfig.type == FieldType.select || fieldConfig.type == FieldType.radio) {
+          final options = fieldConfig.selectOptionsMap?.values.toList() ?? 
+                         fieldConfig.selectOptions ?? [];
+          debugPrint('🔽 DROPDOWN: $fieldId = "$value" (options: $options)');
+          
+          if (options.isNotEmpty && !options.contains(value.toString())) {
+            debugPrint('❌ WARNING: Value "$value" not in dropdown options for $fieldId!');
+          }
+        } else {
+          debugPrint('✅ Updated $fieldId: $value');
+        }
+      } else if (value != null) {
+        debugPrint('⚠️ Field $fieldId not found in controllers');
+      }
+    });
+
+    // Debug: Verify Additional Controls controllers after update
+    debugPrint('\n🔍 ADDITIONAL CONTROLS CONTROLLER VALUES AFTER UPDATE:');
+    final additionalControlFields = [
+      'PriSec1CommandOperationMethod',
+      'Sec2Ter1Ter2CommandOperationMethod',
+      'SignalType',
+      'ContractExistence',
+      'DeclaredMaximumUnitPrice',
+      'VoltageAdjustment',
+    ];
+    for (final fieldId in additionalControlFields) {
+      if (_controllers.containsKey(fieldId)) {
+        debugPrint('  $fieldId controller.text = "${_controllers[fieldId]!.text}"');
+      } else {
+        debugPrint('  $fieldId - NO CONTROLLER FOUND');
+      }
+    }
+
+    // Update widget.resource with nested data structures from response
+    // This is crucial for the interactive tabs to display data
+    debugPrint('\n📦 Updating widget.resource with nested data structures...');
+    
+    if (resource['OutputBand'] != null) {
+      widget.resource['OutputBand'] = resource['OutputBand'];
+      debugPrint('  ✅ OutputBand: ${resource['OutputBand']}');
+    }
+    
+    if (resource['SwitchOutput'] != null) {
+      widget.resource['SwitchOutput'] = resource['SwitchOutput'];
+      debugPrint('  ✅ SwitchOutput: ${resource['SwitchOutput']}');
+    }
+    
+    if (resource['OutputRangeBelowAfc'] != null) {
+      widget.resource['OutputRangeBelowAfc'] = resource['OutputRangeBelowAfc'];
+      debugPrint('  ✅ OutputRangeBelowAfc (AFC): ${resource['OutputRangeBelowAfc']}');
+    }
+    
+    if (resource['StartupPattern'] != null) {
+      widget.resource['StartupPattern'] = resource['StartupPattern'];
+      debugPrint('  ✅ StartupPattern: ${resource['StartupPattern']}');
+    }
+    
+    if (resource['StopPattern'] != null) {
+      widget.resource['StopPattern'] = resource['StopPattern'];
+      debugPrint('  ✅ StopPattern: ${resource['StopPattern']}');
+    }
+
+    setState(() {});
+    
+    // Apply dynamic field visibility based on loaded ResourceType
+    _applyDynamicFieldVisibility();
+    
+    // Debug: Check Additional Controls controllers AFTER visibility logic
+    debugPrint('\n🔍 ADDITIONAL CONTROLS AFTER VISIBILITY LOGIC:');
+    for (final fieldId in additionalControlFields) {
+      if (_controllers.containsKey(fieldId)) {
+        debugPrint('  $fieldId controller.text = "${_controllers[fieldId]!.text}"');
+      }
+    }
+  }
+
+  /// Load participant and resource lists from dashboard state
+  void _loadLists() {
+    final dashboardBloc = context.read<DashboardBloc>();
+    final state = dashboardBloc.state;
+    if (state is DashboardLoaded) {
+      setState(() {
+        _participantList = state.allParticipants
+            .map((p) => p['ParticipantName'] as String? ?? p['id'] as String)
+            .toSet()
+            .toList();
+        
+        _resourceList = state.allResources
+            .map((r) => r['ResourceName'] as String? ?? r['id'] as String)
+            .toSet()
+            .toList();
+        
+        // Pre-select current resource if available
+        final currentParticipantName = widget.resource['ParticipantName'] ?? widget.resource['@ParticipantName'];
+        final currentResourceName = widget.resource['ResourceName'] ?? widget.resource['@ResourceName'];
+        
+        if (_participantList.contains(currentParticipantName)) {
+          _selectedParticipant = currentParticipantName;
+        }
+        
+        if (_resourceList.contains(currentResourceName)) {
+          _selectedResource = currentResourceName;
+        }
+      });
+    }
+  }
+
+  /// Show query bottom sheet using the query component
+  void _showQueryBottomSheet() {
+    ResourceQueryComponent.show(
+      context: context,
+      participantList: _participantList,
+      resourceList: _resourceList,
+      initialParticipant: _selectedParticipant,
+      initialResource: _selectedResource,
+      initialDate: _getCurrentDate(),
+      onQueryComplete: (response, resource) {
+        // Handle query completion
+        setState(() {
+          _submissionResponse = response;
+          _showResponse = true;
+        });
+        
+        // Update form fields with resource data
+        _updateFieldsFromResponse(resource);
+      },
+    );
+  }
+
+  /// Handle date field tap
+  void _pickDate(String fieldId) async {
+    await FormFieldBuilder.pickDate(
+      context: context,
+      controller: _controllers[fieldId]!,
+    );
+  }
+
+  /// Save resource data
+  Future<void> _saveResource() async {
+    // Validate both forms
+    final resourceFormValid = FormControllerHelper.validateForm(_resourceFormKey);
+    final technicalSpecsFormValid = FormControllerHelper.validateForm(_technicalSpecsFormKey);
+    
+    if (!resourceFormValid || !technicalSpecsFormValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            !resourceFormValid 
+              ? 'Please fix the errors in the Resource tab'
+              : 'Please fix the errors in the Technical Specs tab'
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      
+      // Switch to the step with errors
+      if (!resourceFormValid) {
+        setState(() {
+          _currentStep = 0;
+        });
+      }
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final formData = FormControllerHelper.getFormData(_controllers);
+      
+      // Build the proper structure for submission
+      final submitData = {
+        "RegistrationData": {
+          "RegistrationSubmit": {
+            "Resource": {
+              // Basic Information
+              "ParticipantName": formData['ParticipantName'] ?? '',
+              "ResourceName": formData['ResourceName'] ?? '',
+              "Area": formData['Area'] ?? '',
+              "ContractType": formData['ContractType'] ?? '',
+              "ResourceType": formData['ResourceType'] ?? '',
+              "StartDate": formData['StartDate'] ?? '',
+              "EndDate": formData['EndDate'] ?? '',
+              "SystemCode": formData['SystemCode'] ?? '',
+              "ResourceShortName": formData['ResourceShortName'] ?? '',
+              "ResourceLongName": formData['ResourceLongName'] ?? '',
+              "BgCode": formData['BgCode'] ?? '',
+              "RemResvUtilization": formData['RemResvUtilization'] ?? '',
+              "RenewableEnergyType": formData['RenewableEnergyType'] ?? '',
+              
+              // Contact Information
+              "ContactPersonName": formData['ContactPersonName'] ?? '',
+              "ContactPersonNameKana": formData['ContactPersonNameKana'] ?? '',
+              "ContactPersonDepartment": formData['ContactPersonDepartment'] ?? '',
+              "ContactPersonPhonePart1": formData['ContactPersonPhonePart1'] ?? '',
+              "ContactPersonPhonePart2": formData['ContactPersonPhonePart2'] ?? '',
+              "ContactPersonPhonePart3": formData['ContactPersonPhonePart3'] ?? '',
+              "ContactPersonEmail": formData['ContactPersonEmail'] ?? '',
+              
+              // Address Information
+              "LocationAddress1": formData['LocationAddress1'] ?? '',
+              "LocationAddress2": formData['LocationAddress2'] ?? '',
+              "LocationAddress3": formData['LocationAddress3'] ?? '',
+              "LocationAddress4": formData['LocationAddress4'] ?? '',
+              "LocationAddress5": formData['LocationAddress5'] ?? '',
+              "ResourceOwner": formData['ResourceOwner'] ?? '',
+              
+              // Payee Information
+              "PayeeName": formData['PayeeName'] ?? '',
+              "PayeeAddress1": formData['PayeeAddress1'] ?? '',
+              "PayeeAddress2": formData['PayeeAddress2'] ?? '',
+              "PayeeAddress3": formData['PayeeAddress3'] ?? '',
+              "PayeePhonePart1": formData['PayeePhonePart1'] ?? '',
+              "PayeePhonePart2": formData['PayeePhonePart2'] ?? '',
+              "PayeePhonePart3": formData['PayeePhonePart3'] ?? '',
+              
+              // Technical Specifications - Basic
+              "BaselineSettingMethod": formData['BaselineSettingMethod'] ?? '',
+              "VenId": formData['VenId'] ?? '',
+              "ModelName": formData['ModelName'] ?? '',
+              "RatedCapacity": formData['RatedCapacity'] ?? '',
+              "RatedVoltage": formData['RatedVoltage'] ?? '',
+              "ContinuousOperationVoltage": formData['ContinuousOperationVoltage'] ?? '',
+              "RatedPowerFactor": formData['RatedPowerFactor'] ?? '',
+              "Frequency": formData['Frequency'] ?? '',
+              "InPlantRate": formData['InPlantRate'] ?? '',
+              
+              // Technical Specifications - Frequency and Operations
+              "ContinuousOperationFrequencyLower": formData['ContinuousOperationFrequencyLower'] ?? '',
+              "ContinuousOperationFrequencyUpper": formData['ContinuousOperationFrequencyUpper'] ?? '',
+              "BlackStart": formData['BlackStart'] ?? '',
+              "RatedOutput": formData['RatedOutput'] ?? '',
+              "MinimumOutput": formData['MinimumOutput'] ?? '',
+              "AuthorizedMaximumOutput": formData['AuthorizedMaximumOutput'] ?? '',
+              "ThermalType": formData['ThermalType'] ?? '',
+              
+              // Technical Specifications - Battery and Hydro
+              "BatteryCapacity": formData['BatteryCapacity'] ?? '',
+              "PumpCharging": formData['PumpCharging'] ?? '',
+              "VariableSpeedOperation": formData['VariableSpeedOperation'] ?? '',
+              "DischargingOutput": formData['DischargingOutput'] ?? '',
+              "DischargingTime": formData['DischargingTime'] ?? '',
+              "ChargingOutput": formData['ChargingOutput'] ?? '',
+              "ChargingTime": formData['ChargingTime'] ?? '',
+              
+              // Technical Specifications - Time Operations
+              "FullPowerGenerationTime": formData['FullPowerGenerationTime'] ?? '',
+              "ContinuousOperationTime": formData['ContinuousOperationTime'] ?? '',
+              "ContinuousOperationTimeLimited": formData['ContinuousOperationTimeLimited'] ?? '',
+              "PhaseModifyingOperation": formData['PhaseModifyingOperation'] ?? '',
+              
+              // Technical Specifications - Water and Reservoir
+              "AmountOfWaterUsed": formData['AmountOfWaterUsed'] ?? '',
+              "ReservoirCapacity": formData['ReservoirCapacity'] ?? '',
+              "InflowAmount": formData['InflowAmount'] ?? '',
+              "ContinuousOperationOutput": formData['ContinuousOperationOutput'] ?? '',
+              "PumpedSupply": formData['PumpedSupply'] ?? '',
+              
+              // Technical Specifications - Advanced Operations
+              "FcbOperation": formData['FcbOperation'] ?? '',
+              "OverPowerOperation": formData['OverPowerOperation'] ?? '',
+              "PeakModeOperation": formData['PeakModeOperation'] ?? '',
+              "Dss": formData['Dss'] ?? '',
+              "OverPowerOperationMaximumOutput": formData['OverPowerOperationMaximumOutput'] ?? '',
+              "PeakModeOperationMaximumOutput": formData['PeakModeOperationMaximumOutput'] ?? '',
+              "OperationTime": formData['OperationTime'] ?? '',
+              "NumberOfStartups": formData['NumberOfStartups'] ?? '',
+              
+              // Technical Specifications - AFC and Frequency Control
+              "AfcMinimumOutput": formData['AfcMinimumOutput'] ?? '',
+              "GfVariationRate": formData['GfVariationRate'] ?? '',
+              "DeadBand": formData['DeadBand'] ?? '',
+              "FrequencyMeasurementInterval": formData['FrequencyMeasurementInterval'] ?? '',
+              "FrequencyMeasurementError": formData['FrequencyMeasurementError'] ?? '',
+              "DelayTime": formData['DelayTime'] ?? '',
+              "GfWidthOutOfRatedOutput": formData['GfWidthOutOfRatedOutput'] ?? '',
+              
+              // Technical Specifications - Market Context
+              "MarketContext": formData['MarketContext'] ?? '',
+              
+              // Status
+              "RecordStatus": formData['RecordStatus'] ?? '',
+              "TransactionId": formData['TransactionId'] ?? '',
+              "Comments": formData['Comments'] ?? '',
+            }
+          }
+        }
+      };
+      
+      debugPrint('Saving resource data: $submitData');
+      debugPrint('Form data: $formData');
+      
+      final response = await ApiService.updateResource(widget.resource['id'], submitData);
+
+      if (mounted) {
+        setState(() {
+          _submissionResponse = response;
+          _showResponse = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resource saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Refresh the dashboard data
+        final authState = context.read<AuthBloc>().state;
+        final userType = authState is AuthAuthenticated ? authState.userType : UserType.BSP;
+        context.read<DashboardBloc>().add(LoadDashboardData(userType: userType));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _submissionResponse = {
+            'RegistrationData': {
+              'RegistrationSubmit': {
+                'Messages': {
+                  'Error': {'#text': 'Error saving resource: $e'},
+                },
+              },
+            },
+          };
+          _showResponse = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving resource: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      drawer: const AppDrawer(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('Resource Update'),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: SizedBox(width: 40, height: 40, child: NotificationIcon()),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showQueryBottomSheet,
+        backgroundColor: theme.brightness == Brightness.dark 
+            ? const Color(0xFF2A2A2A)  // Lighter shade of black for dark mode
+            : theme.colorScheme.primary, // Primary color for light mode
+        foregroundColor: Colors.white,
+        tooltip: 'Query Resource',
+        child: const Icon(Icons.search),
+      ),
+      body: _isLoading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading resource data...',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                // Response messages
+                if (_showResponse)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: ResponseMessagesCard(
+                      response: _submissionResponse,
+                      visible: _showResponse,
+                      title: 'Messages',
+                    ),
+                  ),
+                if (_showResponse) const SizedBox(height: 16),
+                
+                // Custom horizontal step indicator
+                _buildStepIndicator(),
+                
+                // Content area
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentStep = index;
+                      });
+                    },
+                    children: _buildStepContents(),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildResourceTab() {
+    return AnimatedBuilder(
+      // Listen to both ResourceType AND ContractType changes
+      animation: Listenable.merge([
+        _controllers['ResourceType']!,
+        _controllers['ContractType']!,
+      ]),
+      builder: (context, child) {
+        // Get current values
+        final resourceTypeValue = _controllers['ResourceType']?.text ?? '01';
+        final contractTypeValue = _controllers['ContractType']?.text;
+        
+        debugPrint('🔄 Rebuilding form for ResourceType: $resourceTypeValue, ContractType: $contractTypeValue');
+        
+        // Update field configurations dynamically
+        for (final section in _resourceSections) {
+          for (var i = 0; i < section.fields.length; i++) {
+            final field = section.fields[i];
+            final fieldId = field.id;
+            
+            final isVisible = ControlParamsHelper.isFieldVisible(
+              resourceTypeValue, 
+              fieldId,
+              contractTypeValue: contractTypeValue,
+            );
+            final isRequired = ControlParamsHelper.isFieldRequired(
+              resourceTypeValue, 
+              fieldId,
+              contractTypeValue: contractTypeValue,
+            );
+            
+            // Update field configuration
+            section.fields[i] = field.copyWith(
+              visible: isVisible,
+              required: isRequired,
+            );
+            
+            // Clear hidden field values
+            if (!isVisible && _controllers.containsKey(fieldId)) {
+              _controllers[fieldId]?.clear();
+            }
+          }
+        }
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Form(
+            key: _resourceFormKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Build all form sections directly
+                ..._resourceSections.map((section) {
+                  return FormFieldBuilder.buildSection(
+                    context: context,
+                    section: section,
+                    controllers: _controllers,
+                    onDateFieldTap: _pickDate,
+                  );
+                }),
+
+            const SizedBox(height: 18),
+            
+            // Submit button
+            Center(
+              child: SizedBox(
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: _isSubmitting ? null : _saveResource,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Theme.of(context).cardColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_isSubmitting ? 'Saving...' : 'Submit'),
+                      const SizedBox(width: 8),
+                      _isSubmitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.send, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Note about resource updates
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.amber.shade200,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: Colors.amber.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please ensure all required fields are filled correctly before submitting.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.amber.shade900,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // Output Band Tab Helper Methods
+  // ============================================================
+
+  // Card view for mobile devices
+  Widget _buildCardView(List<dynamic> outputBandInfo) {
+    return Column(
+      children: outputBandInfo.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Card Header with Row Number and Actions
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.5),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.label,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Output Band #${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          tooltip: 'Edit',
+                          onPressed: () => _showOutputBandDialog(
+                            context,
+                            existingData: item,
+                            index: index,
+                          ),
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          tooltip: 'Delete',
+                          onPressed: () =>
+                              _confirmDeleteOutputBand(context, index),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Card Content
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCardRow('Output', item['Output']?.toString() ?? '-',
+                        'kW', Icons.electric_bolt),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'GF Width',
+                        item['GfWidth']?.toString() ?? '-',
+                        'kW',
+                        Icons.straighten),
+                    const Divider(height: 20),
+                    _buildCardRow('AFC Width',
+                        item['AfcWidth']?.toString() ?? '-', 'kW', Icons.tune),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'AFC Variation Speed',
+                        item['AfcVariationSpeed']?.toString() ?? '-',
+                        'kW/min',
+                        Icons.speed),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'OTM Variation Speed',
+                        item['OtmVariationSpeed']?.toString() ?? '-',
+                        'kW/min',
+                        Icons.speed),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'AFC+OTM Variation Speed',
+                        item['AfcOtmVariationSpeed']?.toString() ?? '-',
+                        'kW/min',
+                        Icons.speed),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // Helper to build card rows
+  Widget _buildCardRow(String label, String value, String unit, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                unit,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Table view for desktop/tablet
+  Widget _buildTableView(List<dynamic> outputBandInfo) {
+    return Card(
+      elevation: 2,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(
+            Theme.of(context).colorScheme.primaryContainer,
+          ),
+          columnSpacing: 20,
+          columns: [
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.index'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.output'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.gfWidth'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.afcWidth'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.afcVariationSpeed'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.otmVariationSpeed'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.afcOtmVariationSpeed'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'resource.RegistrationSubmit.Resource.OutputBand.grid.actions'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+          rows: outputBandInfo.asMap().entries.map<DataRow>((entry) {
+            final index = entry.key;
+            final item = entry.value;
+
+            return DataRow(
+              cells: [
+                DataCell(Text('${index + 1}')),
+                DataCell(Text(item['Output']?.toString() ?? '-')),
+                DataCell(Text(item['GfWidth']?.toString() ?? '-')),
+                DataCell(Text(item['AfcWidth']?.toString() ?? '-')),
+                DataCell(Text(item['AfcVariationSpeed']?.toString() ?? '-')),
+                DataCell(Text(item['OtmVariationSpeed']?.toString() ?? '-')),
+                DataCell(Text(item['AfcOtmVariationSpeed']?.toString() ?? '-')),
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        tooltip: 'Edit',
+                        onPressed: () => _showOutputBandDialog(
+                          context,
+                          existingData: item,
+                          index: index,
+                        ),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        tooltip: 'Delete',
+                        onPressed: () =>
+                            _confirmDeleteOutputBand(context, index),
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showOutputBandDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final outputController =
+        TextEditingController(text: existingData?['Output']?.toString() ?? '');
+    final gfWidthController =
+        TextEditingController(text: existingData?['GfWidth']?.toString() ?? '');
+    final afcWidthController = TextEditingController(
+        text: existingData?['AfcWidth']?.toString() ?? '');
+    final afcVariationSpeedController = TextEditingController(
+        text: existingData?['AfcVariationSpeed']?.toString() ?? '');
+    final otmVariationSpeedController = TextEditingController(
+        text: existingData?['OtmVariationSpeed']?.toString() ?? '');
+    final afcOtmVariationSpeedController = TextEditingController(
+        text: existingData?['AfcOtmVariationSpeed']?.toString() ?? '');
+
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              index == null ? Icons.add_circle : Icons.edit,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 12),
+            Text(index == null
+                ? 'Add Output Band'
+                : 'Edit Output Band #${index + 1}'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: outputController,
+                    decoration: const InputDecoration(
+                      labelText: 'Output (kW)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.electric_bolt),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter output value';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: gfWidthController,
+                    decoration: const InputDecoration(
+                      labelText: 'GF Width (kW)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.straighten),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter GF width';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: afcWidthController,
+                    decoration: const InputDecoration(
+                      labelText: 'AFC Width (kW)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.tune),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter AFC width';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: afcVariationSpeedController,
+                    decoration: const InputDecoration(
+                      labelText: 'AFC Variation Speed (kW/min)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.speed),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter AFC variation speed';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: otmVariationSpeedController,
+                    decoration: const InputDecoration(
+                      labelText: 'OTM Variation Speed (kW/min)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.speed),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter OTM variation speed';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: afcOtmVariationSpeedController,
+                    decoration: const InputDecoration(
+                      labelText: 'AFC+OTM Variation Speed (kW/min)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.speed),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter AFC+OTM variation speed';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newData = {
+                  'Output': outputController.text,
+                  'GfWidth': gfWidthController.text,
+                  'AfcWidth': afcWidthController.text,
+                  'AfcVariationSpeed': afcVariationSpeedController.text,
+                  'OtmVariationSpeed': otmVariationSpeedController.text,
+                  'AfcOtmVariationSpeed': afcOtmVariationSpeedController.text,
+                };
+
+                setState(() {
+                  final outputBandData = widget.resource['OutputBand'] ?? {};
+                  final List<dynamic> outputBandInfo =
+                      outputBandData['OutputBandInfo'] ?? [];
+
+                  if (index == null) {
+                    // Add new
+                    outputBandInfo.add(newData);
+                  } else {
+                    // Update existing
+                    outputBandInfo[index] = newData;
+                  }
+
+                  widget.resource['OutputBand'] = {
+                    'OutputBandInfo': outputBandInfo,
+                  };
+                });
+
+                Navigator.of(context).pop();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'Output band added successfully'
+                        : 'Output band updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteOutputBand(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete'),
+          ],
+        ),
+        content:
+            Text('Are you sure you want to delete Output Band #${index + 1}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                final outputBandData = widget.resource['OutputBand'];
+                final List<dynamic> outputBandInfo =
+                    outputBandData['OutputBandInfo'];
+                outputBandInfo.removeAt(index);
+              });
+
+              Navigator.of(context).pop();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Output band deleted successfully'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // Switch Output Tab Helper Methods
+  // ============================================================
+
+  Widget _buildSwitchOutputCardView(List<dynamic> switchOutputInfo) {
+    return Column(
+      children: switchOutputInfo.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.5),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.power_settings_new,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Switch Output #${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          tooltip: 'Edit',
+                          onPressed: () => _showSwitchOutputDialog(context,
+                              existingData: item, index: index),
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          tooltip: 'Delete',
+                          onPressed: () =>
+                              _confirmDeleteSwitchOutput(context, index),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCardRow('Output', item['Output']?.toString() ?? '-',
+                        'kW', Icons.electric_bolt),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'Switch Time',
+                        item['SwitchTime']?.toString() ?? '-',
+                        'min',
+                        Icons.timer),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSwitchOutputTableView(List<dynamic> switchOutputInfo) {
+    return Card(
+      elevation: 2,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(
+              Theme.of(context).colorScheme.primaryContainer),
+          columnSpacing: 60,
+          columns: [
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.SwitchOutput.grid.index'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.SwitchOutput.grid.output'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.SwitchOutput.grid.switchTime'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.SwitchOutput.grid.actions'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+          rows: switchOutputInfo.asMap().entries.map<DataRow>((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return DataRow(
+              cells: [
+                DataCell(Text('${index + 1}')),
+                DataCell(Text(item['Output']?.toString() ?? '-')),
+                DataCell(Text(item['SwitchTime']?.toString() ?? '-')),
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        tooltip: 'Edit',
+                        onPressed: () => _showSwitchOutputDialog(context,
+                            existingData: item, index: index),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        tooltip: 'Delete',
+                        onPressed: () =>
+                            _confirmDeleteSwitchOutput(context, index),
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showSwitchOutputDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final outputController =
+        TextEditingController(text: existingData?['Output']?.toString() ?? '');
+    final switchTimeController = TextEditingController(
+        text: existingData?['SwitchTime']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(index == null ? Icons.add_circle : Icons.edit,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(index == null
+                ? 'Add Switch Output'
+                : 'Edit Switch Output #${index + 1}'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: outputController,
+                decoration: const InputDecoration(
+                  labelText: 'Output (kW)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.electric_bolt),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter output value';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: switchTimeController,
+                decoration: const InputDecoration(
+                  labelText: 'Switch Time (min)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.timer),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter switch time';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newData = {
+                  'Output': outputController.text,
+                  'SwitchTime': switchTimeController.text,
+                };
+                setState(() {
+                  final switchOutputData =
+                      widget.resource['SwitchOutput'] ?? {};
+                  var info = switchOutputData['SwitchOutputInfo'];
+                  List<dynamic> switchOutputInfo;
+                  if (info is List) {
+                    switchOutputInfo = info;
+                  } else if (info is Map) {
+                    switchOutputInfo = [info];
+                  } else {
+                    switchOutputInfo = [];
+                  }
+
+                  if (index == null) {
+                    switchOutputInfo.add(newData);
+                  } else {
+                    switchOutputInfo[index] = newData;
+                  }
+                  widget.resource['SwitchOutput'] = {
+                    'SwitchOutputInfo': switchOutputInfo
+                  };
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'Switch output added successfully'
+                        : 'Switch output updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteSwitchOutput(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete')
+          ],
+        ),
+        content: Text(
+            'Are you sure you want to delete Switch Output #${index + 1}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                final switchOutputData = widget.resource['SwitchOutput'];
+                var info = switchOutputData['SwitchOutputInfo'];
+                if (info is List) {
+                  info.removeAt(index);
+                }
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Switch output deleted successfully'),
+                    backgroundColor: Colors.red),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // AFC Tab Helper Methods
+  // ============================================================
+
+  Widget _buildAfcCardView(List<dynamic> afcInfo) {
+    return Column(
+      children: afcInfo.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.5),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.tune,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'AFC Record #${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          tooltip: 'Edit',
+                          onPressed: () => _showAfcDialog(context,
+                              existingData: item, index: index),
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          tooltip: 'Delete',
+                          onPressed: () => _confirmDeleteAfc(context, index),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCardRow('Output', item['Output']?.toString() ?? '-',
+                        'kW', Icons.electric_bolt),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'Operation Time',
+                        item['OperationTime']?.toString() ?? '-',
+                        'min',
+                        Icons.timer),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'Output Variation Speed',
+                        item['OutputVariationSpeed']?.toString() ?? '-',
+                        'kW/min',
+                        Icons.speed),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildAfcTableView(List<dynamic> afcInfo) {
+    return Card(
+      elevation: 2,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(
+              Theme.of(context).colorScheme.primaryContainer),
+          columnSpacing: 40,
+          columns: [
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.OutputRangeBelowAfc.grid.index'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.OutputRangeBelowAfc.grid.output'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.OutputRangeBelowAfc.grid.operationTime'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.OutputRangeBelowAfc.grid.outputVariationSpeed'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.OutputRangeBelowAfc.grid.actions'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+          rows: afcInfo.asMap().entries.map<DataRow>((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return DataRow(
+              cells: [
+                DataCell(Text('${index + 1}')),
+                DataCell(Text(item['Output']?.toString() ?? '-')),
+                DataCell(Text(item['OperationTime']?.toString() ?? '-')),
+                DataCell(Text(item['OutputVariationSpeed']?.toString() ?? '-')),
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        tooltip: 'Edit',
+                        onPressed: () => _showAfcDialog(context,
+                            existingData: item, index: index),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        tooltip: 'Delete',
+                        onPressed: () => _confirmDeleteAfc(context, index),
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showAfcDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final outputController =
+        TextEditingController(text: existingData?['Output']?.toString() ?? '');
+    final operationTimeController = TextEditingController(
+        text: existingData?['OperationTime']?.toString() ?? '');
+    final outputVariationSpeedController = TextEditingController(
+        text: existingData?['OutputVariationSpeed']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(index == null ? Icons.add_circle : Icons.edit,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(index == null
+                ? 'Add AFC Record'
+                : 'Edit AFC Record #${index + 1}'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: outputController,
+                decoration: const InputDecoration(
+                  labelText: 'Output (kW)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.electric_bolt),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter output value';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: operationTimeController,
+                decoration: const InputDecoration(
+                  labelText: 'Operation Time (min)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.timer),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter operation time';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: outputVariationSpeedController,
+                decoration: const InputDecoration(
+                  labelText: 'Output Variation Speed (kW/min)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.speed),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter output variation speed';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newData = {
+                  'Output': outputController.text,
+                  'OperationTime': operationTimeController.text,
+                  'OutputVariationSpeed': outputVariationSpeedController.text,
+                };
+                setState(() {
+                  final afcData = widget.resource['OutputRangeBelowAfc'] ?? {};
+                  var info = afcData['OutputRangeBelowAfcInfo'];
+                  List<dynamic> afcInfo;
+                  if (info is List) {
+                    afcInfo = info;
+                  } else if (info is Map) {
+                    afcInfo = [info];
+                  } else {
+                    afcInfo = [];
+                  }
+
+                  if (index == null) {
+                    afcInfo.add(newData);
+                  } else {
+                    afcInfo[index] = newData;
+                  }
+                  widget.resource['OutputRangeBelowAfc'] = {
+                    'OutputRangeBelowAfcInfo': afcInfo
+                  };
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'AFC record added successfully'
+                        : 'AFC record updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteAfc(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete')
+          ],
+        ),
+        content:
+            Text('Are you sure you want to delete AFC Record #${index + 1}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                final afcData = widget.resource['OutputRangeBelowAfc'];
+                var info = afcData['OutputRangeBelowAfcInfo'];
+                if (info is List) {
+                  info.removeAt(index);
+                }
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('AFC record deleted successfully'),
+                    backgroundColor: Colors.red),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // Startup Pattern Tab Helper Methods
+  // ============================================================
+
+  Widget _buildStartupEventsCardView(List<dynamic> events) {
+    return Column(
+      children: events.asMap().entries.map((entry) {
+        final index = entry.key;
+        final event = entry.value;
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondaryContainer
+                      .withOpacity(0.5),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.event,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.secondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Event #${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          tooltip: 'Edit',
+                          onPressed: () => _showStartupEventDialog(context,
+                              existingData: event, index: index),
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          tooltip: 'Delete',
+                          onPressed: () =>
+                              _confirmDeleteStartupEvent(context, index),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCardRow('Event Name',
+                        event['EventName']?.toString() ?? '-', '', Icons.label),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'Change Time',
+                        event['ChangeTime']?.toString() ?? '-',
+                        'min:sec',
+                        Icons.timer),
+                    const Divider(height: 20),
+                    _buildCardRow('Output', event['Output']?.toString() ?? '-',
+                        'kW', Icons.electric_bolt),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStartupEventsTableView(List<dynamic> events) {
+    return Card(
+      elevation: 2,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(
+              Theme.of(context).colorScheme.secondaryContainer),
+          columnSpacing: 40,
+          columns: [
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StartupPattern.grid.index'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StartupPattern.grid.eventName'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StartupPattern.grid.changeTime'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StartupPattern.grid.output'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StartupPattern.grid.actions'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+          rows: events.asMap().entries.map<DataRow>((entry) {
+            final index = entry.key;
+            final event = entry.value;
+            return DataRow(
+              cells: [
+                DataCell(Text('${index + 1}')),
+                DataCell(Text(event['EventName']?.toString() ?? '-')),
+                DataCell(Text(event['ChangeTime']?.toString() ?? '-')),
+                DataCell(Text(event['Output']?.toString() ?? '-')),
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        tooltip: 'Edit',
+                        onPressed: () => _showStartupEventDialog(context,
+                            existingData: event, index: index),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        tooltip: 'Delete',
+                        onPressed: () =>
+                            _confirmDeleteStartupEvent(context, index),
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showStartupPatternDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final patternNameController = TextEditingController(
+        text: existingData?['PatternName']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(index == null ? Icons.add_circle : Icons.edit,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(index == null ? 'Add Startup Pattern' : 'Edit Pattern Name'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: patternNameController,
+            decoration: const InputDecoration(
+              labelText: 'Pattern Name',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.label),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty)
+                return 'Please enter pattern name';
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                setState(() {
+                  final startupPatternData =
+                      widget.resource['StartupPattern'] ?? {};
+                  var info = startupPatternData['StartupPatternInfo'];
+                  List<dynamic> patterns;
+                  if (info is List) {
+                    patterns = info;
+                  } else if (info is Map) {
+                    patterns = [info];
+                  } else {
+                    patterns = [];
+                  }
+
+                  if (index == null) {
+                    // Add new pattern
+                    patterns.add({
+                      'PatternName': patternNameController.text,
+                      'StartupPatternEvent': [],
+                    });
+                    _selectedStartupPatternIndex = patterns.length - 1;
+                  } else {
+                    // Edit existing pattern
+                    patterns[index]['PatternName'] = patternNameController.text;
+                  }
+                  widget.resource['StartupPattern'] = {
+                    'StartupPatternInfo': patterns
+                  };
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'Pattern added successfully'
+                        : 'Pattern updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteStartupPattern(BuildContext context, int index) {
+    final patterns =
+        (widget.resource['StartupPattern']?['StartupPatternInfo'] as List?) ??
+            [];
+    final patternName =
+        patterns[index]['PatternName']?.toString() ?? 'Pattern ${index + 1}';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete')
+          ],
+        ),
+        content: Text(
+            'Are you sure you want to delete pattern "$patternName"? All events in this pattern will be deleted.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                patterns.removeAt(index);
+                if (_selectedStartupPatternIndex >= patterns.length) {
+                  _selectedStartupPatternIndex =
+                      patterns.isNotEmpty ? patterns.length - 1 : 0;
+                }
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Pattern deleted successfully'),
+                    backgroundColor: Colors.red),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStartupEventDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final eventNameController = TextEditingController(
+        text: existingData?['EventName']?.toString() ?? '');
+    final changeTimeController = TextEditingController(
+        text: existingData?['ChangeTime']?.toString() ?? '');
+    final outputController =
+        TextEditingController(text: existingData?['Output']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(index == null ? Icons.add_circle : Icons.edit,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(index == null ? 'Add Event' : 'Edit Event #${index + 1}'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: eventNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Event Name',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.label),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter event name';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: changeTimeController,
+                decoration: const InputDecoration(
+                  labelText: 'Change Time (min:sec)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.timer),
+                  hintText: 'e.g., 5:30',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter change time';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: outputController,
+                decoration: const InputDecoration(
+                  labelText: 'Output (kW)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.electric_bolt),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter output value';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newEvent = {
+                  'EventName': eventNameController.text,
+                  'ChangeTime': changeTimeController.text,
+                  'Output': outputController.text,
+                };
+                setState(() {
+                  final patterns = (widget.resource['StartupPattern']
+                          ?['StartupPatternInfo'] as List?) ??
+                      [];
+                  if (patterns.isNotEmpty &&
+                      _selectedStartupPatternIndex < patterns.length) {
+                    final selectedPattern =
+                        patterns[_selectedStartupPatternIndex];
+                    List<dynamic> events =
+                        selectedPattern['StartupPatternEvent'] as List? ?? [];
+
+                    if (index == null) {
+                      events.add(newEvent);
+                    } else {
+                      events[index] = newEvent;
+                    }
+                    selectedPattern['StartupPatternEvent'] = events;
+                  }
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'Event added successfully'
+                        : 'Event updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteStartupEvent(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete')
+          ],
+        ),
+        content: Text('Are you sure you want to delete Event #${index + 1}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                final patterns = (widget.resource['StartupPattern']
+                        ?['StartupPatternInfo'] as List?) ??
+                    [];
+                if (patterns.isNotEmpty &&
+                    _selectedStartupPatternIndex < patterns.length) {
+                  final selectedPattern =
+                      patterns[_selectedStartupPatternIndex];
+                  List<dynamic> events =
+                      selectedPattern['StartupPatternEvent'] as List? ?? [];
+                  events.removeAt(index);
+                }
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Event deleted successfully'),
+                    backgroundColor: Colors.red),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // Stop Pattern Tab Helper Methods
+  // ============================================================
+
+  Widget _buildStopEventsCardView(List<dynamic> events) {
+    return Column(
+      children: events.asMap().entries.map((entry) {
+        final index = entry.key;
+        final event = entry.value;
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .errorContainer
+                      .withOpacity(0.5),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.event,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.error),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Event #${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          tooltip: 'Edit',
+                          onPressed: () => _showStopEventDialog(context,
+                              existingData: event, index: index),
+                          color: Theme.of(context).colorScheme.primary,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          tooltip: 'Delete',
+                          onPressed: () =>
+                              _confirmDeleteStopEvent(context, index),
+                          color: Colors.red,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCardRow('Event Name',
+                        event['EventName']?.toString() ?? '-', '', Icons.label),
+                    const Divider(height: 20),
+                    _buildCardRow(
+                        'Change Time',
+                        event['ChangeTime']?.toString() ?? '-',
+                        'min:sec',
+                        Icons.timer),
+                    const Divider(height: 20),
+                    _buildCardRow('Output', event['Output']?.toString() ?? '-',
+                        'kW', Icons.electric_bolt),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStopEventsTableView(List<dynamic> events) {
+    return Card(
+      elevation: 2,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(
+              Theme.of(context).colorScheme.errorContainer),
+          columnSpacing: 40,
+          columns: [
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StopPattern.grid.index'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StopPattern.grid.eventName'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StopPattern.grid.changeTime'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StopPattern.grid.output'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center)),
+            DataColumn(
+                label: Text('resource.RegistrationSubmit.Resource.StopPattern.grid.actions'.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+          rows: events.asMap().entries.map<DataRow>((entry) {
+            final index = entry.key;
+            final event = entry.value;
+            return DataRow(
+              cells: [
+                DataCell(Text('${index + 1}')),
+                DataCell(Text(event['EventName']?.toString() ?? '-')),
+                DataCell(Text(event['ChangeTime']?.toString() ?? '-')),
+                DataCell(Text(event['Output']?.toString() ?? '-')),
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        tooltip: 'Edit',
+                        onPressed: () => _showStopEventDialog(context,
+                            existingData: event, index: index),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        tooltip: 'Delete',
+                        onPressed: () =>
+                            _confirmDeleteStopEvent(context, index),
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showStopPatternDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final patternNameController = TextEditingController(
+        text: existingData?['PatternName']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(index == null ? Icons.add_circle : Icons.edit,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(index == null ? 'Add Stop Pattern' : 'Edit Pattern Name'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: patternNameController,
+            decoration: const InputDecoration(
+              labelText: 'Pattern Name',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.label),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty)
+                return 'Please enter pattern name';
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                setState(() {
+                  final stopPatternData = widget.resource['StopPattern'] ?? {};
+                  var info = stopPatternData['StopPatternInfo'];
+                  List<dynamic> patterns;
+                  if (info is List) {
+                    patterns = info;
+                  } else if (info is Map) {
+                    patterns = [info];
+                  } else {
+                    patterns = [];
+                  }
+
+                  if (index == null) {
+                    // Add new pattern
+                    patterns.add({
+                      'PatternName': patternNameController.text,
+                      'StopPatternEvent': [],
+                    });
+                    _selectedStopPatternIndex = patterns.length - 1;
+                  } else {
+                    // Edit existing pattern
+                    patterns[index]['PatternName'] = patternNameController.text;
+                  }
+                  widget.resource['StopPattern'] = {
+                    'StopPatternInfo': patterns
+                  };
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'Pattern added successfully'
+                        : 'Pattern updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteStopPattern(BuildContext context, int index) {
+    final patterns =
+        (widget.resource['StopPattern']?['StopPatternInfo'] as List?) ?? [];
+    final patternName =
+        patterns[index]['PatternName']?.toString() ?? 'Pattern ${index + 1}';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete')
+          ],
+        ),
+        content: Text(
+            'Are you sure you want to delete pattern "$patternName"? All events in this pattern will be deleted.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                patterns.removeAt(index);
+                if (_selectedStopPatternIndex >= patterns.length) {
+                  _selectedStopPatternIndex =
+                      patterns.isNotEmpty ? patterns.length - 1 : 0;
+                }
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Pattern deleted successfully'),
+                    backgroundColor: Colors.red),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStopEventDialog(BuildContext context,
+      {Map<String, dynamic>? existingData, int? index}) {
+    final eventNameController = TextEditingController(
+        text: existingData?['EventName']?.toString() ?? '');
+    final changeTimeController = TextEditingController(
+        text: existingData?['ChangeTime']?.toString() ?? '');
+    final outputController =
+        TextEditingController(text: existingData?['Output']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(index == null ? Icons.add_circle : Icons.edit,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Text(index == null ? 'Add Event' : 'Edit Event #${index + 1}'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: eventNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Event Name',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.label),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter event name';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: changeTimeController,
+                decoration: const InputDecoration(
+                  labelText: 'Change Time (min:sec)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.timer),
+                  hintText: 'e.g., 5:30',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter change time';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: outputController,
+                decoration: const InputDecoration(
+                  labelText: 'Output (kW)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.electric_bolt),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty)
+                    return 'Please enter output value';
+                  if (double.tryParse(value) == null)
+                    return 'Please enter a valid number';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newEvent = {
+                  'EventName': eventNameController.text,
+                  'ChangeTime': changeTimeController.text,
+                  'Output': outputController.text,
+                };
+                setState(() {
+                  final patterns = (widget.resource['StopPattern']
+                          ?['StopPatternInfo'] as List?) ??
+                      [];
+                  if (patterns.isNotEmpty &&
+                      _selectedStopPatternIndex < patterns.length) {
+                    final selectedPattern = patterns[_selectedStopPatternIndex];
+                    List<dynamic> events =
+                        selectedPattern['StopPatternEvent'] as List? ?? [];
+
+                    if (index == null) {
+                      events.add(newEvent);
+                    } else {
+                      events[index] = newEvent;
+                    }
+                    selectedPattern['StopPatternEvent'] = events;
+                  }
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(index == null
+                        ? 'Event added successfully'
+                        : 'Event updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Text(index == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteStopEvent(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Confirm Delete')
+          ],
+        ),
+        content: Text('Are you sure you want to delete Event #${index + 1}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                final patterns = (widget.resource['StopPattern']
+                        ?['StopPatternInfo'] as List?) ??
+                    [];
+                if (patterns.isNotEmpty &&
+                    _selectedStopPatternIndex < patterns.length) {
+                  final selectedPattern = patterns[_selectedStopPatternIndex];
+                  List<dynamic> events =
+                      selectedPattern['StopPatternEvent'] as List? ?? [];
+                  events.removeAt(index);
+                }
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Event deleted successfully'),
+                    backgroundColor: Colors.red),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
