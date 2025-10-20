@@ -22,6 +22,7 @@ class ParticipantValidityQuerySchema {
             maxLength: 10,
             placeholder: 'participant.placeholders.participantName'.tr(),
             selectOptions: [], // Will be populated dynamically
+            maxDropdownItems: 5, // Limit to 5 items with scrolling
           ),
         ],
       ),
@@ -35,7 +36,8 @@ class ParticipantValidityQuerySchema {
             required: false,
             minLength: 10,
             maxLength: 10,
-            placeholder: 'YYYY-MM-DD',
+            placeholder: 'YYYY-MM-DD (optional)',
+            initialValue: '', // Explicitly set to blank
           ),
         ],
       ),

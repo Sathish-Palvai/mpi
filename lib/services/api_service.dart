@@ -242,6 +242,36 @@ class ApiService {
     final response = await get('/users', queryParams: queryParams);
     return List<Map<String, dynamic>>.from(response['data']);
   }
+
+  /// Get users by user type from registration info endpoint
+  static Future<List<Map<String, dynamic>>> getUsersByUserType(String userType) async {
+    try {
+      final userTypeKey = userType.toLowerCase();
+      print('>>> Fetching users for userType: $userType (key: $userTypeKey)');
+      final response = await get('/info/lists/registration.users.$userTypeKey');
+      
+      print('>>> Response keys: ${response.keys}');
+      print('>>> Response: $response');
+      
+      // Response format: { "Rows": [...] }
+      if (response.containsKey('Rows')) {
+        final rows = response['Rows'];
+        print('>>> Rows type: ${rows.runtimeType}, Count: ${rows is List ? rows.length : "N/A"}');
+        if (rows is List) {
+          final result = List<Map<String, dynamic>>.from(rows.map((item) => item as Map<String, dynamic>));
+          print('>>> Successfully parsed ${result.length} users');
+          return result;
+        }
+      }
+      
+      print('>>> No Rows key found in response or invalid format');
+      return [];
+    } catch (e) {
+      print('>>> Error fetching users by type: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      return [];
+    }
+  }
   
   // Resources endpoints
   static Future<List<Map<String, dynamic>>> getResources({String? search, String? type, String? status}) async {
@@ -252,6 +282,36 @@ class ApiService {
     
     final response = await get('/resources', queryParams: queryParams);
     return List<Map<String, dynamic>>.from(response['data']);
+  }
+
+  /// Get resources by user type from registration info endpoint
+  static Future<List<Map<String, dynamic>>> getResourcesByUserType(String userType) async {
+    try {
+      final userTypeKey = userType.toLowerCase();
+      print('>>> Fetching resources for userType: $userType (key: $userTypeKey)');
+      final response = await get('/info/lists/registration.resource.$userTypeKey');
+      
+      print('>>> Response keys: ${response.keys}');
+      print('>>> Response: $response');
+      
+      // Response format: { "Rows": [...] }
+      if (response.containsKey('Rows')) {
+        final rows = response['Rows'];
+        print('>>> Rows type: ${rows.runtimeType}, Count: ${rows is List ? rows.length : "N/A"}');
+        if (rows is List) {
+          final result = List<Map<String, dynamic>>.from(rows.map((item) => item as Map<String, dynamic>));
+          print('>>> Successfully parsed ${result.length} resources');
+          return result;
+        }
+      }
+      
+      print('>>> No Rows key found in response or invalid format');
+      return [];
+    } catch (e) {
+      print('>>> Error fetching resources by type: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      return [];
+    }
   }
   
   static Future<Map<String, dynamic>> queryResource(Map<String, dynamic> queryData) async {

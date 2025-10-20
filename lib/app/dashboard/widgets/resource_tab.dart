@@ -49,7 +49,7 @@ class ResourceTab extends StatelessWidget {
           ),
           child: InkWell(
             onDoubleTap: () {
-              context.push('/resource-update', extra: resource);
+              _navigateToResourceUpdate(context, resource);
             },
             child: ExpansionTile(
               leading: CircleAvatar(
@@ -153,8 +153,9 @@ class ResourceTab extends StatelessWidget {
 
       // Fetch full resource detail from backend
       final resourceName = resource['ResourceName'] ?? '';
+      final resourceType = resource['ResourceType'] ?? 'PUMP';
       final response = await http.get(
-        Uri.parse('http://localhost:3000/api/resources/detail/$resourceName'),
+        Uri.parse('http://localhost:3000/api/resources/detail/$resourceName?type=$resourceType'),
       );
 
       if (!context.mounted) return;
@@ -166,6 +167,47 @@ class ResourceTab extends StatelessWidget {
         final data = json.decode(response.body);
         if (data['success'] == true) {
           // Navigate to resource detail screen with full data
+          context.push('/resource-detail', extra: data['data']);
+        } else {
+          _showErrorSnackBar(context, 'Failed to load resource details');
+        }
+      } else {
+        _showErrorSnackBar(context, 'Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading indicator
+      _showErrorSnackBar(context, 'Error: $e');
+    }
+  }
+
+  Future<void> _navigateToResourceUpdate(BuildContext context, Map<String, dynamic> resource) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Fetch full resource detail from backend
+      final resourceName = resource['ResourceName'] ?? '';
+      final resourceType = resource['ResourceType'] ?? 'PUMP';
+      final response = await http.get(
+        Uri.parse('http://localhost:3000/api/resources/detail/$resourceName?type=$resourceType'),
+      );
+
+      if (!context.mounted) return;
+      
+      // Close loading indicator
+      Navigator.of(context).pop();
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          // Navigate to resource detail screen with full data for editing
           context.push('/resource-detail', extra: data['data']);
         } else {
           _showErrorSnackBar(context, 'Failed to load resource details');
@@ -263,7 +305,8 @@ class ResourceTab extends StatelessWidget {
       case 'HYDRO':
         return 'HYDRO';
       default:
-        return type?.substring(0, 5) ?? 'UNK';
+        if (type == null || type.isEmpty) return 'UNK';
+        return type.length > 5 ? type.substring(0, 5) : type;
     }
   }
 }

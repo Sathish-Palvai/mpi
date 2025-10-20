@@ -216,6 +216,9 @@ class FormFieldBuilder {
               }
             },
       style: Theme.of(context).textTheme.bodyLarge,
+      menuMaxHeight: config.maxDropdownItems != null 
+          ? (config.maxDropdownItems! * 48.0) // Approximate height per item
+          : null,
     );
   }
 

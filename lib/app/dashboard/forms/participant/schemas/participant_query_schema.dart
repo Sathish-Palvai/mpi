@@ -22,6 +22,7 @@ class ParticipantQuerySchema {
             required: true,
             placeholder: 'Select participant to query',
             selectOptions: [], // Will be populated dynamically
+            maxDropdownItems: 5, // Limit to 5 items with scrolling
           ),
         ],
       ),
@@ -36,6 +37,7 @@ class ParticipantQuerySchema {
             minLength: 10,
             maxLength: 10,
             placeholder: 'YYYY-MM-DD (optional)',
+            initialValue: '', // Explicitly set to blank
           ),
         ],
       ),

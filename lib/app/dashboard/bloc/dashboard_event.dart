@@ -25,3 +25,13 @@ class SearchChanged extends DashboardEvent {
   @override
   List<Object> get props => [query];
 }
+
+class RefreshDashboardData extends DashboardEvent {
+  final UserType userType;
+
+  const RefreshDashboardData({required this.userType});
+
+  @override
+  List<Object> get props => [userType];
+}
+

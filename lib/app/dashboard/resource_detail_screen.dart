@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:easy_localization/easy_localization.dart';
 import '../shared/widgets/app_drawer.dart';
 import '../../widgets/notification_icon.dart';
-import 'bloc/dashboard_bloc.dart';
-import 'bloc/dashboard_event.dart';
 
 class ResourceDetailScreen extends StatefulWidget {
   final Map<String, dynamic> resource;
@@ -97,14 +93,13 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen>
   String? _dss;
   // Secondary state removed until implemented
 
-  // Resource Type Codes
-  static const String THERMAL = '01';
-  static const String PUMP = '02';
-  static const String HYDRO = '03';
-  static const String BATTERY = '04';
-  static const String VPP = '05';
-  static const String OPSI = '06';
-  static const String DSS = '07';
+  // Resource Type Codes (file-based names)
+  static const String THERMAL = 'THERMAL';
+  static const String PUMP = 'PUMP';
+  static const String HYDRO = 'HYDRO';
+  static const String VPP_DEM = 'VPP_DEM';
+  static const String VPP_GEN = 'VPP_GEN';
+  static const String VPP_GEN_AND_DEM = 'VPP_GEN_AND_DEM';
 
   @override
   void initState() {
@@ -327,11 +322,12 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen>
   }
 
   // Returns true when the Primary Maximum Supply Quantity field is applicable
-  // for the currently selected resource type. It's NOT applicable for VPP(05), OPSI(06), DSS(07).
+  // Check if Pri Maximum Supply Quantity field is applicable
+  // for the currently selected resource type. It's NOT applicable for VPP types.
   bool _isPriMaximumApplicable() {
-    return !(_selectedResourceType == VPP ||
-        _selectedResourceType == OPSI ||
-        _selectedResourceType == DSS);
+    return !(_selectedResourceType == VPP_DEM ||
+        _selectedResourceType == VPP_GEN ||
+        _selectedResourceType == VPP_GEN_AND_DEM);
   }
 
   Future<void> _pickDate(TextEditingController controller) async {
@@ -4761,13 +4757,13 @@ class _ResourceDetailScreenState extends State<ResourceDetailScreen>
 
   List<DropdownMenuItem<String>> _getResourceTypeOptions() {
     return [
-      const DropdownMenuItem(value: THERMAL, child: Text('THERMAL')),
-      const DropdownMenuItem(value: PUMP, child: Text('PUMP')),
-      const DropdownMenuItem(value: HYDRO, child: Text('HYDRO')),
-      const DropdownMenuItem(value: BATTERY, child: Text('BATTERY')),
-      const DropdownMenuItem(value: VPP, child: Text('VPP')),
-      const DropdownMenuItem(value: OPSI, child: Text('OPSI')),
-      const DropdownMenuItem(value: DSS, child: Text('DSS')),
+      const DropdownMenuItem(value: 'THERMAL', child: Text('THERMAL')),
+      const DropdownMenuItem(value: 'PUMP', child: Text('PUMP')),
+      const DropdownMenuItem(value: 'HYDRO', child: Text('HYDRO')),
+      const DropdownMenuItem(value: 'BATTERY', child: Text('BATTERY')),
+      const DropdownMenuItem(value: 'VPP_DEM', child: Text('VPP_DEM')),
+      const DropdownMenuItem(value: 'VPP_GEN', child: Text('VPP_GEN')),
+      const DropdownMenuItem(value: 'VPP_GEN_AND_DEM', child: Text('VPP_GEN_AND_DEM')),
     ];
   }
 

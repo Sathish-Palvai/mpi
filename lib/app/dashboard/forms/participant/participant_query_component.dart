@@ -83,7 +83,7 @@ class _QueryBottomSheetContentState extends State<_QueryBottomSheetContent> {
       // Initialize controllers with initial values
       final initialData = <String, dynamic>{
         'participantName': widget.initialParticipant ?? '',
-        'tradeDate': widget.initialTradeDate ?? '',
+        'tradeDate': '', // Always start blank
       };
       
       _controllers = FormControllerHelper.initializeControllers(
@@ -99,7 +99,35 @@ class _QueryBottomSheetContentState extends State<_QueryBottomSheetContent> {
     super.dispose();
   }
 
-  Future<void> _handleQuery() async {
+  /// Build query structure matching participant_update_screen format
+  Map<String, dynamic> _buildQueryStructure(String participantName, String tradeDate) {
+    final participant = <String, dynamic>{
+      "@ParticipantName": participantName,
+    };
+    
+    // Only add TradeDate if it's not empty
+    if (tradeDate.isNotEmpty) {
+      participant["@TradeDate"] = tradeDate;
+    }
+    
+    return {
+      "RegistrationData": {
+        "RegistrationQuery": {
+          "Participant": participant,
+        },
+        "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "@xsi:noNamespaceSchemaLocation": "mpr.xsd"
+      }
+    };
+  }
+
+  /// Get current date in yyyy-MM-dd format
+  String _getCurrentDate() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _handleQuery({bool includeTradeDate = true}) async {
     if (!FormControllerHelper.validateForm(_formKey)) {
       return;
     }
@@ -109,13 +137,14 @@ class _QueryBottomSheetContentState extends State<_QueryBottomSheetContent> {
     try {
       final formData = FormControllerHelper.getFormData(_controllers);
       final participantName = formData['participantName'];
-      final tradeDate = formData['tradeDate'];
+      final tradeDate = formData['tradeDate']?.isNotEmpty == true 
+          ? formData['tradeDate'] 
+          : (includeTradeDate ? _getCurrentDate() : ''); // Only use current date if includeTradeDate is true
 
-      // Only send tradeDate if it's not empty
-      final response = await ApiService.queryParticipantByName(
-        participantName,
-        tradeDate: tradeDate?.isNotEmpty == true ? tradeDate : null,
-      );
+      // Build query with same structure as participant_update_screen
+      final queryData = _buildQueryStructure(participantName, tradeDate);
+
+      final response = await ApiService.queryParticipant(queryData);
 
       if (mounted) {
         // Extract participant data from response
@@ -159,115 +188,139 @@ class _QueryBottomSheetContentState extends State<_QueryBottomSheetContent> {
     );
   }
 
+  void _resetForm() {
+    // Clear only trade date, keep participant name
+    _controllers['tradeDate']?.clear();
+    setState(() {});
+  }
+
+  void _handleReset() async {
+    _resetForm();
+    // Re-issue the query with only participant name (without trade date)
+    await _handleQuery(includeTradeDate: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Container(
-      height: 400,
+      height: 450,
       decoration: BoxDecoration(
         color: theme.dialogBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'participant.header.queryTitle'.tr(),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Form fields using config-driven library
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: _sections.map((section) {
-                      return FormFieldBuilder.buildSection(
-                        context: context,
-                        section: section,
-                        controllers: _controllers,
-                        onDateFieldTap: _pickDate,
-                      );
-                    }).toList(),
+      child: Column(
+        children: [
+          // Criteria Header with blue background
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.brightness == Brightness.dark 
+                  ? const Color(0xFF2A2A2A)
+                  : const Color(0xFF283593),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Criteria',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Reset and Query Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton.icon(
-                        onPressed: _isQuerying ? null : () {
-                          // Reset form fields
-                          for (var controller in _controllers.values) {
-                            controller.clear();
-                          }
-                        },
-                        icon: const Icon(Icons.refresh),
-                        label: Text('participant.buttons.reset'.tr()),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: theme.cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton.icon(
-                        onPressed: _isQuerying ? null : _handleQuery,
-                        icon: _isQuerying
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.search),
-                        label: Text(_isQuerying ? 'Querying...' : 'participant.buttons.query'.tr()),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: theme.cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
           ),
-        ),
+          
+          // Form content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Form fields using config-driven library
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: _sections.map((section) {
+                            return FormFieldBuilder.buildSection(
+                              context: context,
+                              section: section,
+                              controllers: _controllers,
+                              onDateFieldTap: _pickDate,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Reset and Query Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 50,
+                            child: OutlinedButton.icon(
+                              onPressed: _isQuerying ? null : _handleReset,
+                              icon: const Icon(Icons.refresh),
+                              label: Text('participant.buttons.reset'.tr()),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: theme.cardColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 50,
+                            child: OutlinedButton.icon(
+                              onPressed: _isQuerying ? null : _handleQuery,
+                              icon: _isQuerying
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.search),
+                              label: Text(_isQuerying ? 'Querying...' : 'participant.buttons.query'.tr()),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: theme.cardColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

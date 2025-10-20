@@ -107,6 +107,9 @@ class FormFieldConfig {
   /// Function to build dynamic options based on dependent field values
   final Map<String, String>? Function(Map<String, String> values)? dynamicOptionsBuilder;
 
+  /// Maximum items to show in dropdown (rest becomes scrollable)
+  final int? maxDropdownItems;
+
   const FormFieldConfig({
     required this.id,
     required this.label,
@@ -138,6 +141,7 @@ class FormFieldConfig {
     this.isDynamic = false,
     this.dependsOn,
     this.dynamicOptionsBuilder,
+    this.maxDropdownItems,
   });
 
   /// Create a copy with modified properties
@@ -172,6 +176,7 @@ class FormFieldConfig {
     bool? isDynamic,
     List<String>? dependsOn,
     Map<String, String>? Function(Map<String, String> values)? dynamicOptionsBuilder,
+    int? maxDropdownItems,
   }) {
     return FormFieldConfig(
       id: id ?? this.id,
@@ -204,6 +209,7 @@ class FormFieldConfig {
       isDynamic: isDynamic ?? this.isDynamic,
       dependsOn: dependsOn ?? this.dependsOn,
       dynamicOptionsBuilder: dynamicOptionsBuilder ?? this.dynamicOptionsBuilder,
+      maxDropdownItems: maxDropdownItems ?? this.maxDropdownItems,
     );
   }
 

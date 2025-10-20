@@ -107,6 +107,52 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
           //   tooltip: 'Home',
           // ),
           // const SizedBox(width: 8),
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              final userType = authState is AuthAuthenticated 
+                ? authState.userType 
+                : UserType.BSP;
+              
+              // Refresh button logic:
+              // - Participants tab: only for MO and TSO users
+              // - Users and Resources tabs: for all users
+              final isParticipantsTab = _tabController.index == 0;
+              final isMOOrTSO = userType == UserType.MO || userType == UserType.TSO;
+              final showRefreshButton = isParticipantsTab 
+                ? isMOOrTSO  // Participants tab: MO/TSO only
+                : true;       // Users/Resources tabs: all users
+              
+              if (!showRefreshButton) {
+                return const SizedBox.shrink();
+              }
+              
+              // Check if data is currently loading
+              return BlocBuilder<DashboardBloc, DashboardState>(
+                builder: (context, dashboardState) {
+                  final isLoading = dashboardState is DashboardLoading;
+                  
+                  return IconButton(
+                    icon: isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.refresh),
+                    onPressed: isLoading ? null : () {
+                      context.read<DashboardBloc>().add(
+                        RefreshDashboardData(userType: userType),
+                      );
+                    },
+                    tooltip: isLoading ? 'Refreshing...' : 'Refresh Data',
+                  );
+                },
+              );
+            },
+          ),
           const NotificationIcon(),
         ],
         bottom: PreferredSize(
@@ -224,74 +270,100 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
           ),
         ),
       ),
-      body: BlocBuilder<DashboardBloc, DashboardState>(
-        builder: (context, state) {
-          if (state is DashboardLoading) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading dashboard data...'),
-                ],
-              ),
-            );
-          }
+      body: BlocListener<DashboardBloc, DashboardState>(
+        listener: (context, state) {
+          // Show snackbar when refresh completes successfully
           if (state is DashboardLoaded) {
-            // Get userType from auth state
-            final authState = context.read<AuthBloc>().state;
-            final userType = authState is AuthAuthenticated ? authState.userType : null;
-            
-            return TabBarView(
-              controller: _tabController,
-              children: [
-                ParticipantTab(
-                  participants: state.filteredParticipants,
-                  userType: userType,
-                ),
-                UserTab(users: state.filteredUsers),
-                ResourceTab(resources: state.filteredResources),
-              ],
-            );
-          }
-          if (state is DashboardError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading dashboard',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    state.message,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      final authState = context.read<AuthBloc>().state;
-                      final userType = authState is AuthAuthenticated ? authState.userType : UserType.BSP;
-                      context.read<DashboardBloc>().add(LoadDashboardData(userType: userType));
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Data refreshed successfully'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.green,
               ),
             );
           }
-          return const Center(child: Text('Something went wrong.'));
+          // Show error snackbar if refresh fails
+          if (state is DashboardError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Refresh failed: ${state.message}'),
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         },
+        child: BlocBuilder<DashboardBloc, DashboardState>(
+          builder: (context, state) {
+            if (state is DashboardLoading) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading dashboard data...'),
+                  ],
+                ),
+              );
+            }
+            if (state is DashboardLoaded) {
+              // Get userType from auth state
+              final authState = context.read<AuthBloc>().state;
+              final userType = authState is AuthAuthenticated ? authState.userType : null;
+              
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  ParticipantTab(
+                    participants: state.filteredParticipants,
+                    userType: userType,
+                  ),
+                  UserTab(users: state.filteredUsers),
+                  ResourceTab(resources: state.filteredResources),
+                ],
+              );
+            }
+            if (state is DashboardError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading dashboard',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        final authState = context.read<AuthBloc>().state;
+                        final userType = authState is AuthAuthenticated ? authState.userType : UserType.BSP;
+                        context.read<DashboardBloc>().add(LoadDashboardData(userType: userType));
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const Center(child: Text('Something went wrong.'));
+          },
+        ),
       ),
     );
   }
